@@ -5,7 +5,8 @@
 //
 // Commands:
 //
-//	seed              create demo accounts (idempotent: existing ones are skipped)
+//	seed              demo accounts, Bangladesh geo data, 20 default tourist spots,
+//	                  demo payment numbers and gigs (idempotent: existing rows are skipped)
 //	reset-db          DROP every table, re-run migrations (dev only)
 //	fresh             reset-db + reset-redis + seed (dev only)
 //	reset-redis       FLUSHDB: OTPs, lockouts, rate limits, caches (dev only)
@@ -41,7 +42,7 @@ const SeedPassword = "Password123"
 
 const usage = `usage: manage <command> [--force]
 
-  seed              create demo accounts (3 users, 3 guides, 1 admin)
+  seed              demo accounts + geo data + 20 tourist spots + demo gigs
   reset-db          drop all tables and re-run migrations       (dev only)
   fresh             reset-db + reset-redis + seed               (dev only)
   reset-redis       flush Redis (OTPs, locks, rate limits)      (dev only)
@@ -235,6 +236,9 @@ var seedUsers = []seedUser{
 	// ---- admin
 	{Role: domain.RoleAdmin, FullName: "Super Admin", Email: "admin@cholobangladesh.com", Country: "BD", City: "Dhaka"},
 
+	// ---- moderator (manages geo data + tourist spots)
+	{Role: domain.RoleModerator, FullName: "Content Moderator", Email: "moderator@cholobangladesh.com", Country: "BD", City: "Dhaka"},
+
 	// ---- tourists (role = user)
 	{Role: domain.RoleUser, FullName: "Emma Watson", Email: "emma@example.com", Country: "GB", City: "London",
 		Gender: "female", DOB: "1995-04-21"},
@@ -335,8 +339,8 @@ func seed(ctx context.Context, db *gorm.DB, cost int) error {
 		created++
 		fmt.Printf("✔ create %-6s %-28s %s\n", su.Role, email, deref(u.Phone))
 	}
-	fmt.Printf("\nseed done: %d created, %d skipped. Password for every seeded account: %s\n", created, skipped, SeedPassword)
-	return nil
+	fmt.Printf("\naccounts: %d created, %d skipped. Password for every seeded account: %s\n\n", created, skipped, SeedPassword)
+	return seedContent(ctx, db)
 }
 
 func deref(p *string) string {

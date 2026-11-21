@@ -144,7 +144,7 @@ type GuideSearchQuery struct {
 // ============================================================== admin
 
 type AdminUserQuery struct {
-	Role   string `form:"role" binding:"omitempty,oneof=user guide admin" example:"guide"`
+	Role   string `form:"role" binding:"omitempty,oneof=user guide admin moderator" example:"guide"`
 	Status string `form:"status" binding:"omitempty,oneof=active suspended deleted" example:"active"`
 	Q      string `form:"q" binding:"omitempty,max=100" example:"rahim"`
 	Page   int    `form:"page" binding:"omitempty,gte=1" example:"1"`
@@ -164,4 +164,10 @@ type VerificationQuery struct {
 
 type RejectVerificationRequest struct {
 	Reason string `json:"reason" binding:"required,min=5,max=500" example:"NID photo is blurry, please upload a clearer image"`
+}
+
+// UpdateUserRoleRequest promotes a tourist account to moderator (or back).
+// Guide and admin roles cannot be assigned here.
+type UpdateUserRoleRequest struct {
+	Role string `json:"role" binding:"required,oneof=user moderator" example:"moderator"`
 }

@@ -1,5 +1,20 @@
 basePath: /api/v1
 definitions:
+  dto.AdminGigStatusRequest:
+    properties:
+      reason:
+        example: Misleading description
+        maxLength: 500
+        type: string
+      status:
+        enum:
+        - active
+        - suspended
+        example: suspended
+        type: string
+    required:
+    - status
+    type: object
   dto.AdminUserPage:
     properties:
       items:
@@ -141,6 +156,62 @@ definitions:
       user:
         $ref: '#/definitions/dto.MeResponse'
     type: object
+  dto.Author:
+    properties:
+      avatar_url:
+        type: string
+      country_code:
+        example: GB
+        type: string
+      flag_url:
+        example: https://flagcdn.com/w40/gb.png
+        type: string
+      full_name:
+        example: Emma Watson
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+    type: object
+  dto.AutofillRequest:
+    properties:
+      district_id:
+        example: 36
+        minimum: 1
+        type: integer
+      name:
+        example: Ratargul Swamp Forest
+        maxLength: 150
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  dto.AutofillResponse:
+    properties:
+      draft:
+        $ref: '#/definitions/dto.CreateSpotRequest'
+      notes:
+        example:
+        - 'YouTube: set YOUTUBE_API_KEY to fetch videos automatically'
+        items:
+          type: string
+        type: array
+      sources:
+        example:
+        - wikipedia
+        - youtube
+        - google_images
+        - ai
+        items:
+          type: string
+        type: array
+      suggested_upazilas:
+        description: nearest upazilas to the coordinates
+        items:
+          $ref: '#/definitions/dto.UpazilaRef'
+        type: array
+    type: object
   dto.AvailabilityRequest:
     properties:
       is_available:
@@ -148,6 +219,144 @@ definitions:
         type: boolean
     required:
     - is_available
+    type: object
+  dto.BookingGig:
+    properties:
+      duration_hours:
+        example: 8
+        type: number
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      meeting_point:
+        example: Mongla ferry ghat
+        type: string
+      title:
+        example: Full-day Sundarbans boat safari
+        type: string
+    type: object
+  dto.BookingPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.BookingResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.BookingResponse:
+    properties:
+      accepted_at:
+        type: string
+      can_accept:
+        description: Actions the current user may take — drive the buttons from these.
+        example: false
+        type: boolean
+      can_cancel:
+        example: true
+        type: boolean
+      can_complete:
+        example: false
+        type: boolean
+      can_pay:
+        example: false
+        type: boolean
+      can_reject:
+        example: false
+        type: boolean
+      can_review:
+        example: false
+        type: boolean
+      cancelled_at:
+        type: string
+      code:
+        example: CB7K3D9QXA
+        type: string
+      completed_at:
+        type: string
+      created_at:
+        type: string
+      currency:
+        example: BDT
+        type: string
+      gig:
+        $ref: '#/definitions/dto.BookingGig'
+      group_size:
+        example: 4
+        type: integer
+      guide:
+        $ref: '#/definitions/dto.PersonRef'
+      guide_contact:
+        allOf:
+        - $ref: '#/definitions/dto.Contact'
+        description: visible to the tourist once accepted
+      has_review:
+        example: false
+        type: boolean
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      note:
+        type: string
+      payment_status:
+        enum:
+        - unpaid
+        - submitted
+        - paid
+        - refunded
+        example: unpaid
+        type: string
+      pricing_type:
+        example: per_group
+        type: string
+      spot:
+        $ref: '#/definitions/dto.BookingSpot'
+      start_time:
+        example: "08:00"
+        type: string
+      status:
+        enum:
+        - pending
+        - accepted
+        - rejected
+        - cancelled
+        - completed
+        example: pending
+        type: string
+      status_reason:
+        type: string
+      total_amount:
+        example: 6000
+        type: integer
+      tour_date:
+        example: "2026-12-20"
+        type: string
+      tourist:
+        $ref: '#/definitions/dto.PersonRef'
+      tourist_contact:
+        allOf:
+        - $ref: '#/definitions/dto.Contact'
+        description: visible to the guide once accepted
+      unit_price:
+        example: 6000
+        type: integer
+    type: object
+  dto.BookingSpot:
+    properties:
+      cover_image_url:
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      location_name:
+        example: Mongla, Bagerhat
+        type: string
+      slug:
+        example: sundarbans
+        type: string
+      title:
+        example: Sundarbans
+        type: string
     type: object
   dto.ChangePasswordRequest:
     properties:
@@ -206,6 +415,258 @@ definitions:
     - full_name
     - registration_token
     type: object
+  dto.Contact:
+    properties:
+      email:
+        example: rahim.guide@example.com
+        type: string
+      phone:
+        example: "+8801711000001"
+        type: string
+      whatsapp:
+        example: "+8801711000001"
+        type: string
+    type: object
+  dto.CreateBookingRequest:
+    properties:
+      contact_phone:
+        example: "+8801712345678"
+        type: string
+      gig_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      group_size:
+        example: 4
+        maximum: 100
+        minimum: 1
+        type: integer
+      note:
+        example: Two kids in the group, we are vegetarian.
+        maxLength: 1000
+        type: string
+      start_time:
+        example: "08:00"
+        type: string
+      tour_date:
+        example: "2026-12-20"
+        type: string
+    required:
+    - gig_id
+    - group_size
+    - tour_date
+    type: object
+  dto.CreateGigRequest:
+    properties:
+      available_days:
+        example:
+        - fri
+        - sat
+        items:
+          type: string
+        maxItems: 7
+        type: array
+        uniqueItems: true
+      cancellation_policy:
+        example: Free cancellation up to 48 hours before the tour.
+        maxLength: 1000
+        type: string
+      cover_image_url:
+        example: ""
+        maxLength: 1000
+        type: string
+      description:
+        example: We start at Mongla port at 7am and cruise through the tidal creeks...
+        maxLength: 10000
+        minLength: 50
+        type: string
+      duration_hours:
+        example: 8
+        maximum: 720
+        type: number
+      excludes:
+        example:
+        - Hotel
+        - Transport to Mongla
+        items:
+          type: string
+        maxItems: 20
+        type: array
+      includes:
+        example:
+        - Boat ride
+        - Lunch
+        - Forest permit
+        items:
+          type: string
+        maxItems: 20
+        type: array
+      languages:
+        example:
+        - bn
+        - en
+        items:
+          type: string
+        maxItems: 10
+        minItems: 1
+        type: array
+        uniqueItems: true
+      max_group_size:
+        example: 10
+        maximum: 100
+        minimum: 1
+        type: integer
+      meeting_point:
+        example: Mongla ferry ghat
+        maxLength: 300
+        type: string
+      price:
+        example: 6000
+        maximum: 1000000
+        minimum: 100
+        type: integer
+      pricing_type:
+        enum:
+        - per_person
+        - per_group
+        example: per_group
+        type: string
+      spot_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      status:
+        enum:
+        - draft
+        - active
+        - paused
+        example: active
+        type: string
+      title:
+        example: Full-day Sundarbans boat safari with a licensed guide
+        maxLength: 150
+        minLength: 10
+        type: string
+    required:
+    - description
+    - duration_hours
+    - languages
+    - max_group_size
+    - price
+    - pricing_type
+    - spot_id
+    - title
+    type: object
+  dto.CreateSpotRequest:
+    properties:
+      best_time_to_visit:
+        example: December – February
+        maxLength: 120
+        type: string
+      bn_title:
+        example: সেন্টমার্টিন দ্বীপ
+        maxLength: 150
+        type: string
+      category:
+        enum:
+        - beach
+        - island
+        - hill
+        - forest
+        - waterfall
+        - lake
+        - river
+        - wetland
+        - heritage
+        - religious
+        - park
+        - city
+        - other
+        example: island
+        type: string
+      description:
+        example: Saint Martin's Island is a small coral island...
+        maxLength: 20000
+        minLength: 20
+        type: string
+      google_map_url:
+        example: https://www.google.com/maps/search/?api=1&query=20.6237,92.3233
+        maxLength: 500
+        type: string
+      highlights:
+        example:
+        - Coral reefs
+        - Chhera Dwip
+        items:
+          type: string
+        maxItems: 20
+        type: array
+      images:
+        items:
+          $ref: '#/definitions/dto.ImageInput'
+        maxItems: 50
+        type: array
+      is_featured:
+        example: true
+        type: boolean
+      latitude:
+        example: 20.62375
+        maximum: 27
+        minimum: 20
+        type: number
+      location_name:
+        example: Teknaf, Cox's Bazar
+        maxLength: 200
+        minLength: 2
+        type: string
+      longitude:
+        example: 92.3233
+        maximum: 93
+        minimum: 88
+        type: number
+      slug:
+        example: saint-martins-island
+        maxLength: 120
+        type: string
+      source_url:
+        example: https://en.wikipedia.org/wiki/St._Martin%27s_Island
+        maxLength: 500
+        type: string
+      status:
+        enum:
+        - draft
+        - published
+        - archived
+        example: published
+        type: string
+      subtitle:
+        example: Bangladesh's only coral island
+        maxLength: 300
+        type: string
+      title:
+        example: Saint Martin's Island
+        maxLength: 150
+        minLength: 2
+        type: string
+      upazila_ids:
+        example:
+        - 75
+        items:
+          type: integer
+        maxItems: 5
+        minItems: 1
+        type: array
+        uniqueItems: true
+      videos:
+        items:
+          $ref: '#/definitions/dto.VideoInput'
+        maxItems: 20
+        type: array
+    required:
+    - category
+    - description
+    - location_name
+    - title
+    - upazila_ids
+    type: object
   dto.DeleteAccountRequest:
     properties:
       confirm:
@@ -217,6 +678,229 @@ definitions:
         type: string
     required:
     - confirm
+    type: object
+  dto.DistrictPatch:
+    properties:
+      bn_name:
+        example: কক্সবাজার
+        maxLength: 80
+        minLength: 1
+        type: string
+      division_id:
+        example: 1
+        minimum: 1
+        type: integer
+      latitude:
+        example: 21.44315
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        example: 91.97977
+        maximum: 180
+        minimum: -180
+        type: number
+      name:
+        example: Cox's Bazar
+        maxLength: 80
+        minLength: 2
+        type: string
+      slug:
+        example: coxs-bazar
+        maxLength: 80
+        type: string
+      website:
+        example: www.coxsbazar.gov.bd
+        maxLength: 255
+        type: string
+    type: object
+  dto.DistrictRef:
+    properties:
+      bn_name:
+        example: কক্সবাজার
+        type: string
+      division_id:
+        example: 1
+        type: integer
+      id:
+        example: 9
+        type: integer
+      name:
+        example: Cox's Bazar
+        type: string
+      slug:
+        example: coxs-bazar
+        type: string
+    type: object
+  dto.DistrictRequest:
+    properties:
+      bn_name:
+        example: কক্সবাজার
+        maxLength: 80
+        minLength: 1
+        type: string
+      division_id:
+        example: 1
+        minimum: 1
+        type: integer
+      latitude:
+        example: 21.44315
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        example: 91.97977
+        maximum: 180
+        minimum: -180
+        type: number
+      name:
+        example: Cox's Bazar
+        maxLength: 80
+        minLength: 2
+        type: string
+      slug:
+        example: coxs-bazar
+        maxLength: 80
+        type: string
+      website:
+        example: www.coxsbazar.gov.bd
+        maxLength: 255
+        type: string
+    required:
+    - bn_name
+    - division_id
+    - name
+    type: object
+  dto.DistrictResponse:
+    properties:
+      bn_name:
+        example: কক্সবাজার
+        type: string
+      division:
+        $ref: '#/definitions/dto.DivisionRef'
+      division_id:
+        example: 1
+        type: integer
+      id:
+        example: 9
+        type: integer
+      latitude:
+        example: 21.44315
+        type: number
+      longitude:
+        example: 91.97977
+        type: number
+      name:
+        example: Cox's Bazar
+        type: string
+      slug:
+        example: coxs-bazar
+        type: string
+      spot_count:
+        example: 2
+        type: integer
+      upazila_count:
+        example: 9
+        type: integer
+      website:
+        example: www.coxsbazar.gov.bd
+        type: string
+    type: object
+  dto.DivisionPatch:
+    properties:
+      bn_name:
+        example: চট্টগ্রাম
+        maxLength: 80
+        minLength: 1
+        type: string
+      latitude:
+        example: 22.701308
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        example: 91.705861
+        maximum: 180
+        minimum: -180
+        type: number
+      name:
+        example: Chattogram
+        maxLength: 80
+        minLength: 2
+        type: string
+      slug:
+        example: chattogram
+        maxLength: 80
+        type: string
+    type: object
+  dto.DivisionRef:
+    properties:
+      bn_name:
+        example: চট্টগ্রাম
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: Chattogram
+        type: string
+      slug:
+        example: chattogram
+        type: string
+    type: object
+  dto.DivisionRequest:
+    properties:
+      bn_name:
+        example: চট্টগ্রাম
+        maxLength: 80
+        minLength: 1
+        type: string
+      latitude:
+        example: 22.701308
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        example: 91.705861
+        maximum: 180
+        minimum: -180
+        type: number
+      name:
+        example: Chattogram
+        maxLength: 80
+        minLength: 2
+        type: string
+      slug:
+        example: chattogram
+        maxLength: 80
+        type: string
+    required:
+    - bn_name
+    - name
+    type: object
+  dto.DivisionResponse:
+    properties:
+      bn_name:
+        example: চট্টগ্রাম
+        type: string
+      district_count:
+        example: 11
+        type: integer
+      id:
+        example: 1
+        type: integer
+      latitude:
+        example: 22.701308
+        type: number
+      longitude:
+        example: 91.705861
+        type: number
+      name:
+        example: Chattogram
+        type: string
+      slug:
+        example: chattogram
+        type: string
     type: object
   dto.EmailOTPRequest:
     properties:
@@ -241,6 +925,118 @@ definitions:
     required:
     - email
     - otp
+    type: object
+  dto.GeoRef:
+    properties:
+      bn_name:
+        example: চট্টগ্রাম
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: Chattogram
+        type: string
+      slug:
+        example: chattogram
+        type: string
+    type: object
+  dto.GigPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.GigResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.GigResponse:
+    properties:
+      available_days:
+        example:
+        - fri
+        - sat
+        items:
+          type: string
+        type: array
+      booking_count:
+        example: 20
+        type: integer
+      cancellation_policy:
+        type: string
+      completed_count:
+        example: 15
+        type: integer
+      cover_image_url:
+        description: gig cover, falls back to the spot cover
+        type: string
+      created_at:
+        type: string
+      currency:
+        example: BDT
+        type: string
+      description:
+        type: string
+      duration_hours:
+        example: 8
+        type: number
+      excludes:
+        items:
+          type: string
+        type: array
+      guide:
+        $ref: '#/definitions/dto.GuideRef'
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      includes:
+        items:
+          type: string
+        type: array
+      languages:
+        example:
+        - bn
+        - en
+        items:
+          type: string
+        type: array
+      max_group_size:
+        example: 10
+        type: integer
+      meeting_point:
+        type: string
+      price:
+        example: 6000
+        type: integer
+      pricing_type:
+        enum:
+        - per_person
+        - per_group
+        example: per_group
+        type: string
+      rating_avg:
+        example: 4.8
+        type: number
+      rating_count:
+        example: 12
+        type: integer
+      spot:
+        $ref: '#/definitions/dto.SpotRef'
+      status:
+        enum:
+        - draft
+        - active
+        - paused
+        - suspended
+        example: active
+        type: string
+      suspended_reason:
+        type: string
+      title:
+        example: Full-day Sundarbans boat safari
+        type: string
+      updated_at:
+        type: string
     type: object
   dto.GuideOptionsResponse:
     properties:
@@ -345,6 +1141,42 @@ definitions:
       verified_at:
         type: string
     type: object
+  dto.GuideRef:
+    properties:
+      avatar_url:
+        type: string
+      experience_years:
+        example: 10
+        type: integer
+      full_name:
+        example: Rahim Uddin
+        type: string
+      headline:
+        example: Licensed Sundarbans mangrove & wildlife guide
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      languages:
+        example:
+        - bn
+        - en
+        items:
+          type: string
+        type: array
+      rating_avg:
+        example: 4.9
+        type: number
+      rating_count:
+        example: 128
+        type: integer
+      total_tours:
+        example: 310
+        type: integer
+      verified:
+        example: true
+        type: boolean
+    type: object
   dto.IdentifierOTPRequest:
     properties:
       identifier:
@@ -371,6 +1203,47 @@ definitions:
     required:
     - identifier
     type: object
+  dto.ImageInput:
+    properties:
+      caption:
+        example: Sunset at Laboni Point
+        maxLength: 300
+        type: string
+      id:
+        description: ID keeps an existing image (and its uploaded file) when replacing
+          the list. Omit for new URLs.
+        example: ""
+        type: string
+      source_url:
+        example: https://commons.wikimedia.org/wiki/File:Cox%27s_Bazaar_Sunset_Sep2019.jpg
+        maxLength: 500
+        type: string
+      url:
+        example: https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/Cox%27s_Bazaar_Sunset_Sep2019.jpg/1280px-Cox%27s_Bazaar_Sunset_Sep2019.jpg
+        maxLength: 1000
+        type: string
+    required:
+    - url
+    type: object
+  dto.ImageResponse:
+    properties:
+      caption:
+        example: Boats at the jetty
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      source_url:
+        example: https://commons.wikimedia.org/wiki/File:Saint_Martins_Island.jpg
+        type: string
+      uploaded:
+        description: true = stored in our Cloudinary
+        example: false
+        type: boolean
+      url:
+        example: https://thumb.wikimedia.org/.../1280px-Saint_Martins_Island.jpg
+        type: string
+    type: object
   dto.LoginRequest:
     properties:
       identifier:
@@ -386,6 +1259,53 @@ definitions:
     required:
     - identifier
     - password
+    type: object
+  dto.MapMarker:
+    properties:
+      bn_title:
+        example: সাজেক ভ্যালি
+        type: string
+      category:
+        example: hill
+        type: string
+      cover_image_url:
+        type: string
+      district_id:
+        example: 4
+        type: integer
+      district_name:
+        example: Rangamati
+        type: string
+      district_slug:
+        example: rangamati
+        type: string
+      division_id:
+        example: 1
+        type: integer
+      gig_count:
+        example: 3
+        type: integer
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      latitude:
+        example: 23.635
+        type: number
+      longitude:
+        example: 92.49
+        type: number
+      rating_avg:
+        example: 4.7
+        type: number
+      rating_count:
+        example: 18
+        type: integer
+      slug:
+        example: sajek-valley
+        type: string
+      title:
+        example: Sajek Valley
+        type: string
     type: object
   dto.MeResponse:
     properties:
@@ -439,6 +1359,15 @@ definitions:
         - deleted
         example: active
         type: string
+    type: object
+  dto.MyGigsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.GigResponse'
+        type: array
+      quota:
+        $ref: '#/definitions/dto.QuotaResponse'
     type: object
   dto.OAuthRequest:
     properties:
@@ -506,6 +1435,31 @@ definitions:
         example: complete_profile
         type: string
     type: object
+  dto.OptionsResponse:
+    properties:
+      categories:
+        example:
+        - beach
+        - island
+        - hill
+        items:
+          type: string
+        type: array
+      max_images:
+        example: 50
+        type: integer
+      max_videos:
+        example: 20
+        type: integer
+      statuses:
+        example:
+        - draft
+        - published
+        - archived
+        items:
+          type: string
+        type: array
+    type: object
   dto.PageMeta:
     properties:
       limit:
@@ -520,6 +1474,190 @@ definitions:
       total_pages:
         example: 3
         type: integer
+    type: object
+  dto.PaymentMethodPatch:
+    properties:
+      account_name:
+        maxLength: 100
+        minLength: 2
+        type: string
+      account_number:
+        maxLength: 40
+        minLength: 5
+        type: string
+      account_type:
+        enum:
+        - personal
+        - agent
+        - merchant
+        - bank
+        type: string
+      instructions:
+        maxLength: 1000
+        type: string
+      is_active:
+        type: boolean
+      position:
+        maximum: 100
+        minimum: 0
+        type: integer
+      provider:
+        enum:
+        - bkash
+        - nagad
+        - rocket
+        - upay
+        - bank
+        type: string
+    type: object
+  dto.PaymentMethodRequest:
+    properties:
+      account_name:
+        example: CholoBangladesh
+        maxLength: 100
+        minLength: 2
+        type: string
+      account_number:
+        example: "01700000000"
+        maxLength: 40
+        minLength: 5
+        type: string
+      account_type:
+        enum:
+        - personal
+        - agent
+        - merchant
+        - bank
+        example: personal
+        type: string
+      instructions:
+        example: Use Send Money and put your booking code in the reference.
+        maxLength: 1000
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      position:
+        example: 0
+        maximum: 100
+        minimum: 0
+        type: integer
+      provider:
+        enum:
+        - bkash
+        - nagad
+        - rocket
+        - upay
+        - bank
+        example: bkash
+        type: string
+    required:
+    - account_name
+    - account_number
+    - account_type
+    - provider
+    type: object
+  dto.PaymentMethodResponse:
+    properties:
+      account_name:
+        example: CholoBangladesh
+        type: string
+      account_number:
+        example: "01700000000"
+        type: string
+      account_type:
+        example: personal
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      instructions:
+        type: string
+      is_active:
+        example: true
+        type: boolean
+      position:
+        example: 0
+        type: integer
+      provider:
+        enum:
+        - bkash
+        - nagad
+        - rocket
+        - upay
+        - bank
+        example: bkash
+        type: string
+    type: object
+  dto.PaymentPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.PaymentResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.PaymentResponse:
+    properties:
+      admin_note:
+        type: string
+      amount:
+        example: 6000
+        type: integer
+      booking_code:
+        example: CB7K3D9QXA
+        type: string
+      booking_id:
+        type: string
+      created_at:
+        type: string
+      currency:
+        example: BDT
+        type: string
+      gig_title:
+        type: string
+      guide:
+        $ref: '#/definitions/dto.PersonRef'
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      method:
+        $ref: '#/definitions/dto.PaymentMethodResponse'
+      payer:
+        $ref: '#/definitions/dto.PersonRef'
+      provider:
+        example: bkash
+        type: string
+      purpose:
+        example: booking
+        type: string
+      reviewed_at:
+        type: string
+      sender_number:
+        example: "+8801812345678"
+        type: string
+      status:
+        enum:
+        - pending
+        - verified
+        - rejected
+        example: pending
+        type: string
+      transaction_id:
+        example: 8N7A6B5C4D
+        type: string
+    type: object
+  dto.PersonRef:
+    properties:
+      avatar_url:
+        type: string
+      full_name:
+        example: Rahim Uddin
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
     type: object
   dto.PhoneOTPRequest:
     properties:
@@ -648,6 +1786,38 @@ definitions:
       verified_at:
         type: string
     type: object
+  dto.QuotaResponse:
+    properties:
+      can_create:
+        example: false
+        type: boolean
+      extra_slots:
+        example: 0
+        type: integer
+      free_limit:
+        example: 5
+        type: integer
+      remaining:
+        example: 0
+        type: integer
+      total_limit:
+        example: 5
+        type: integer
+      upgrade_required:
+        description: show "buy more slots" (payment comes later)
+        example: true
+        type: boolean
+      used:
+        example: 5
+        type: integer
+    type: object
+  dto.ReasonRequest:
+    properties:
+      reason:
+        example: Fully booked on that date
+        maxLength: 500
+        type: string
+    type: object
   dto.RefreshRequest:
     properties:
       refresh_token:
@@ -668,6 +1838,16 @@ definitions:
     required:
     - reason
     type: object
+  dto.ReplyRequest:
+    properties:
+      reply:
+        example: Thank you! It was a pleasure guiding your family.
+        maxLength: 1000
+        minLength: 2
+        type: string
+    required:
+    - reply
+    type: object
   dto.ResetPasswordRequest:
     properties:
       new_password:
@@ -681,6 +1861,73 @@ definitions:
     required:
     - new_password
     - reset_token
+    type: object
+  dto.ReviewList:
+    properties:
+      reviews:
+        $ref: '#/definitions/dto.ReviewPage'
+      summary:
+        $ref: '#/definitions/dto.Summary'
+    type: object
+  dto.ReviewPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.ReviewResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.ReviewPaymentRequest:
+    properties:
+      note:
+        example: Matched in bKash statement
+        maxLength: 500
+        type: string
+    type: object
+  dto.ReviewResponse:
+    properties:
+      author:
+        $ref: '#/definitions/dto.Author'
+      booking_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      comment:
+        example: Rahim was amazing — we saw a crocodile and spotted deer!
+        type: string
+      created_at:
+        type: string
+      gig_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      gig_title:
+        example: Full-day Sundarbans boat safari
+        type: string
+      guide_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      guide_reply:
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      images:
+        example:
+        - https://res.cloudinary.com/demo/image/upload/v1/cholobangladesh/reviews/x.jpg
+        items:
+          type: string
+        type: array
+      is_visible:
+        example: true
+        type: boolean
+      rating:
+        example: 5
+        type: integer
+      replied_at:
+        type: string
+      spot_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
     type: object
   dto.SessionResponse:
     properties:
@@ -701,6 +1948,493 @@ definitions:
         type: string
       user_agent:
         example: Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)
+        type: string
+    type: object
+  dto.SetQuotaRequest:
+    properties:
+      extra_slots:
+        example: 3
+        maximum: 500
+        minimum: 0
+        type: integer
+      note:
+        example: Paid 1500 BDT via bKash TX 8N7A6B5C
+        maxLength: 500
+        type: string
+    type: object
+  dto.SpotCard:
+    properties:
+      bn_title:
+        example: সেন্টমার্টিন দ্বীপ
+        type: string
+      category:
+        example: island
+        type: string
+      cover_image_url:
+        type: string
+      district:
+        $ref: '#/definitions/dto.GeoRef'
+      division:
+        $ref: '#/definitions/dto.GeoRef'
+      gig_count:
+        example: 5
+        type: integer
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      is_featured:
+        example: true
+        type: boolean
+      latitude:
+        example: 20.62375
+        type: number
+      location_name:
+        example: Teknaf, Cox's Bazar
+        type: string
+      longitude:
+        example: 92.3233
+        type: number
+      rating_avg:
+        example: 4.8
+        type: number
+      rating_count:
+        example: 32
+        type: integer
+      slug:
+        example: saint-martins-island
+        type: string
+      status:
+        example: published
+        type: string
+      subtitle:
+        example: Bangladesh's only coral island
+        type: string
+      title:
+        example: Saint Martin's Island
+        type: string
+    type: object
+  dto.SpotDetail:
+    properties:
+      best_time_to_visit:
+        example: December – February
+        type: string
+      bn_title:
+        example: সেন্টমার্টিন দ্বীপ
+        type: string
+      category:
+        example: island
+        type: string
+      cover_image_url:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      district:
+        $ref: '#/definitions/dto.GeoRef'
+      division:
+        $ref: '#/definitions/dto.GeoRef'
+      gig_count:
+        example: 5
+        type: integer
+      google_map_url:
+        type: string
+      highlights:
+        items:
+          type: string
+        type: array
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      images:
+        items:
+          $ref: '#/definitions/dto.ImageResponse'
+        type: array
+      is_featured:
+        example: true
+        type: boolean
+      latitude:
+        example: 20.62375
+        type: number
+      location_name:
+        example: Teknaf, Cox's Bazar
+        type: string
+      longitude:
+        example: 92.3233
+        type: number
+      rating_avg:
+        example: 4.8
+        type: number
+      rating_count:
+        example: 32
+        type: integer
+      slug:
+        example: saint-martins-island
+        type: string
+      source_url:
+        type: string
+      status:
+        example: published
+        type: string
+      subtitle:
+        example: Bangladesh's only coral island
+        type: string
+      title:
+        example: Saint Martin's Island
+        type: string
+      upazilas:
+        items:
+          $ref: '#/definitions/dto.UpazilaRef'
+        type: array
+      updated_at:
+        type: string
+      videos:
+        items:
+          $ref: '#/definitions/dto.VideoResponse'
+        type: array
+    type: object
+  dto.SpotPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.SpotCard'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.SpotRef:
+    properties:
+      bn_title:
+        example: সুন্দরবন
+        type: string
+      cover_image_url:
+        type: string
+      district_id:
+        example: 28
+        type: integer
+      district_name:
+        example: Bagerhat
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      location_name:
+        example: Mongla (Bagerhat) & Shyamnagar (Satkhira)
+        type: string
+      published:
+        example: true
+        type: boolean
+      slug:
+        example: sundarbans
+        type: string
+      title:
+        example: Sundarbans
+        type: string
+    type: object
+  dto.SubmitPaymentRequest:
+    properties:
+      amount:
+        example: 6000
+        minimum: 1
+        type: integer
+      method_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      sender_number:
+        example: "01812345678"
+        type: string
+      transaction_id:
+        example: 8N7A6B5C4D
+        maxLength: 50
+        minLength: 6
+        type: string
+    required:
+    - amount
+    - method_id
+    - sender_number
+    - transaction_id
+    type: object
+  dto.Summary:
+    properties:
+      average:
+        example: 4.75
+        type: number
+      count:
+        example: 12
+        type: integer
+      stars:
+        additionalProperties:
+          format: int64
+          type: integer
+        description: '"1".."5" -> count'
+        type: object
+    type: object
+  dto.TreeDistrict:
+    properties:
+      bn_name:
+        example: কক্সবাজার
+        type: string
+      id:
+        example: 9
+        type: integer
+      name:
+        example: Cox's Bazar
+        type: string
+      slug:
+        example: coxs-bazar
+        type: string
+      upazilas:
+        items:
+          $ref: '#/definitions/dto.TreeUpazila'
+        type: array
+    type: object
+  dto.TreeDivision:
+    properties:
+      bn_name:
+        example: চট্টগ্রাম
+        type: string
+      districts:
+        items:
+          $ref: '#/definitions/dto.TreeDistrict'
+        type: array
+      id:
+        example: 1
+        type: integer
+      name:
+        example: Chattogram
+        type: string
+      slug:
+        example: chattogram
+        type: string
+    type: object
+  dto.TreeUpazila:
+    properties:
+      bn_name:
+        example: টেকনাফ
+        type: string
+      id:
+        example: 75
+        type: integer
+      name:
+        example: Teknaf
+        type: string
+      slug:
+        example: teknaf
+        type: string
+      type:
+        example: upazila
+        type: string
+    type: object
+  dto.UpazilaPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.UpazilaResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.UpazilaPatch:
+    properties:
+      bn_name:
+        example: টেকনাফ
+        maxLength: 100
+        minLength: 1
+        type: string
+      district_id:
+        example: 9
+        minimum: 1
+        type: integer
+      latitude:
+        example: 20.8624
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        example: 92.3058
+        maximum: 180
+        minimum: -180
+        type: number
+      name:
+        example: Teknaf
+        maxLength: 100
+        minLength: 2
+        type: string
+      slug:
+        example: teknaf
+        maxLength: 100
+        type: string
+      type:
+        enum:
+        - upazila
+        - metro_thana
+        example: upazila
+        type: string
+    type: object
+  dto.UpazilaRef:
+    properties:
+      bn_name:
+        example: টেকনাফ
+        type: string
+      district:
+        $ref: '#/definitions/dto.GeoRef'
+      id:
+        example: 75
+        type: integer
+      name:
+        example: Teknaf
+        type: string
+      slug:
+        example: teknaf
+        type: string
+      type:
+        example: upazila
+        type: string
+    type: object
+  dto.UpazilaRequest:
+    properties:
+      bn_name:
+        example: টেকনাফ
+        maxLength: 100
+        minLength: 1
+        type: string
+      district_id:
+        example: 9
+        minimum: 1
+        type: integer
+      latitude:
+        example: 20.8624
+        maximum: 90
+        minimum: -90
+        type: number
+      longitude:
+        example: 92.3058
+        maximum: 180
+        minimum: -180
+        type: number
+      name:
+        example: Teknaf
+        maxLength: 100
+        minLength: 2
+        type: string
+      slug:
+        example: teknaf
+        maxLength: 100
+        type: string
+      type:
+        enum:
+        - upazila
+        - metro_thana
+        example: upazila
+        type: string
+    required:
+    - bn_name
+    - district_id
+    - name
+    type: object
+  dto.UpazilaResponse:
+    properties:
+      bn_name:
+        example: টেকনাফ
+        type: string
+      district:
+        $ref: '#/definitions/dto.DistrictRef'
+      district_id:
+        example: 9
+        type: integer
+      id:
+        example: 75
+        type: integer
+      latitude:
+        example: 20.8624
+        type: number
+      longitude:
+        example: 92.3058
+        type: number
+      name:
+        example: Teknaf
+        type: string
+      slug:
+        example: teknaf
+        type: string
+      type:
+        enum:
+        - upazila
+        - metro_thana
+        example: upazila
+        type: string
+    type: object
+  dto.UpdateGigRequest:
+    properties:
+      available_days:
+        items:
+          type: string
+        maxItems: 7
+        type: array
+        uniqueItems: true
+      cancellation_policy:
+        maxLength: 1000
+        type: string
+      cover_image_url:
+        maxLength: 1000
+        type: string
+      description:
+        maxLength: 10000
+        minLength: 50
+        type: string
+      duration_hours:
+        example: 6
+        maximum: 720
+        type: number
+      excludes:
+        items:
+          type: string
+        maxItems: 20
+        type: array
+      includes:
+        items:
+          type: string
+        maxItems: 20
+        type: array
+      languages:
+        example:
+        - bn
+        - en
+        items:
+          type: string
+        maxItems: 10
+        minItems: 1
+        type: array
+        uniqueItems: true
+      max_group_size:
+        example: 8
+        maximum: 100
+        minimum: 1
+        type: integer
+      meeting_point:
+        maxLength: 300
+        type: string
+      price:
+        example: 6500
+        maximum: 1000000
+        minimum: 100
+        type: integer
+      pricing_type:
+        enum:
+        - per_person
+        - per_group
+        example: per_person
+        type: string
+      status:
+        enum:
+        - draft
+        - active
+        - paused
+        example: paused
+        type: string
+      title:
+        maxLength: 150
+        minLength: 10
         type: string
     type: object
   dto.UpdateProfileRequest:
@@ -738,6 +2472,122 @@ definitions:
       whatsapp_number:
         example: "+447911123456"
         type: string
+    type: object
+  dto.UpdateSpotRequest:
+    properties:
+      best_time_to_visit:
+        example: December – February
+        maxLength: 120
+        type: string
+      bn_title:
+        example: সেন্টমার্টিন দ্বীপ
+        maxLength: 150
+        type: string
+      category:
+        enum:
+        - beach
+        - island
+        - hill
+        - forest
+        - waterfall
+        - lake
+        - river
+        - wetland
+        - heritage
+        - religious
+        - park
+        - city
+        - other
+        example: island
+        type: string
+      description:
+        example: Saint Martin's Island is a small coral island...
+        maxLength: 20000
+        minLength: 20
+        type: string
+      google_map_url:
+        example: https://www.google.com/maps/search/?api=1&query=20.6237,92.3233
+        maxLength: 500
+        type: string
+      highlights:
+        example:
+        - Coral reefs
+        - Chhera Dwip
+        items:
+          type: string
+        maxItems: 20
+        type: array
+      images:
+        items:
+          $ref: '#/definitions/dto.ImageInput'
+        maxItems: 50
+        type: array
+      is_featured:
+        example: false
+        type: boolean
+      latitude:
+        example: 20.62375
+        maximum: 27
+        minimum: 20
+        type: number
+      location_name:
+        example: Teknaf, Cox's Bazar
+        maxLength: 200
+        minLength: 2
+        type: string
+      longitude:
+        example: 92.3233
+        maximum: 93
+        minimum: 88
+        type: number
+      slug:
+        example: saint-martins-island
+        maxLength: 120
+        type: string
+      source_url:
+        maxLength: 500
+        type: string
+      status:
+        enum:
+        - draft
+        - published
+        - archived
+        example: published
+        type: string
+      subtitle:
+        example: Bangladesh's only coral island
+        maxLength: 300
+        type: string
+      title:
+        example: Saint Martin's Island
+        maxLength: 150
+        minLength: 2
+        type: string
+      upazila_ids:
+        example:
+        - 75
+        items:
+          type: integer
+        maxItems: 5
+        minItems: 1
+        type: array
+        uniqueItems: true
+      videos:
+        items:
+          $ref: '#/definitions/dto.VideoInput'
+        maxItems: 20
+        type: array
+    type: object
+  dto.UpdateUserRoleRequest:
+    properties:
+      role:
+        enum:
+        - user
+        - moderator
+        example: moderator
+        type: string
+    required:
+    - role
     type: object
   dto.UpdateUserStatusRequest:
     properties:
@@ -861,6 +2711,48 @@ definitions:
         example: q4Zr8...registration-token
         type: string
     type: object
+  dto.VideoInput:
+    properties:
+      title:
+        example: Cox's Bazar travel guide
+        maxLength: 300
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=y9vAaKi7SvU
+        maxLength: 300
+        type: string
+    required:
+    - url
+    type: object
+  dto.VideoResponse:
+    properties:
+      embed_url:
+        example: https://www.youtube.com/embed/y9vAaKi7SvU
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      thumbnail_url:
+        example: https://i.ytimg.com/vi/y9vAaKi7SvU/hqdefault.jpg
+        type: string
+      title:
+        example: Saint Martin tour guide
+        type: string
+      url:
+        example: https://www.youtube.com/watch?v=y9vAaKi7SvU
+        type: string
+      youtube_id:
+        example: y9vAaKi7SvU
+        type: string
+    type: object
+  dto.VisibilityRequest:
+    properties:
+      is_visible:
+        example: false
+        type: boolean
+    required:
+    - is_visible
+    type: object
   http.APIVersion:
     properties:
       base_path:
@@ -918,6 +2810,32 @@ definitions:
           $ref: '#/definitions/http.APIVersion'
         type: array
     type: object
+  meta.Country:
+    properties:
+      code:
+        example: BD
+        type: string
+      dial_code:
+        example: "+880"
+        type: string
+      emoji:
+        example: "\U0001F1E7\U0001F1E9"
+        type: string
+      flag_png:
+        description: 40px wide, ideal for dropdowns
+        example: https://flagcdn.com/w40/bd.png
+        type: string
+      flag_png_2x:
+        description: for srcset on retina screens
+        example: https://flagcdn.com/w80/bd.png
+        type: string
+      flag_svg:
+        example: https://flagcdn.com/bd.svg
+        type: string
+      name:
+        example: Bangladesh
+        type: string
+    type: object
   response.Body:
     properties:
       data: {}
@@ -956,6 +2874,21 @@ definitions:
       success:
         example: false
         type: boolean
+    type: object
+  response.PageMeta:
+    properties:
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 57
+        type: integer
+      total_pages:
+        example: 3
+        type: integer
     type: object
 info:
   contact:
@@ -1040,6 +2973,177 @@ paths:
       summary: API version info
       tags:
       - 0. Meta
+  /admin/bookings:
+    get:
+      parameters:
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - enum:
+        - unpaid
+        - submitted
+        - paid
+        - refunded
+        example: unpaid
+        in: query
+        name: payment_status
+        type: string
+      - enum:
+        - pending
+        - accepted
+        - rejected
+        - cancelled
+        - completed
+        example: pending
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: All bookings
+      tags:
+      - 18. Admin · Marketplace
+  /admin/gigs:
+    get:
+      parameters:
+      - example: 28
+        in: query
+        minimum: 1
+        name: district_id
+        type: integer
+      - example: 3
+        in: query
+        minimum: 1
+        name: division_id
+        type: integer
+      - example: ""
+        in: query
+        name: guide_id
+        type: string
+      - example: en
+        in: query
+        name: language
+        type: string
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 10000
+        in: query
+        minimum: 0
+        name: max_price
+        type: integer
+      - example: 500
+        in: query
+        minimum: 0
+        name: min_price
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - example: boat
+        in: query
+        maxLength: 100
+        name: q
+        type: string
+      - enum:
+        - rating
+        - price_low
+        - price_high
+        - newest
+        - popular
+        example: rating
+        in: query
+        name: sort
+        type: string
+      - example: ""
+        in: query
+        name: spot_id
+        type: string
+      - enum:
+        - draft
+        - active
+        - paused
+        - suspended
+        example: active
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List all gigs (any status)
+      tags:
+      - 18. Admin · Marketplace
+  /admin/gigs/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminGigStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Suspend / re-activate a gig
+      tags:
+      - 18. Admin · Marketplace
   /admin/guide-verifications:
     get:
       description: 'Oldest first. Default: all statuses; use `status=pending` for
@@ -1172,6 +3276,357 @@ paths:
       summary: Reject a guide verification
       tags:
       - 8. Admin
+  /admin/guides/{id}/gig-quota:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Total gigs allowed = FREE_GIG_LIMIT + extra_slots. Until online slot purchase exists, admins
+        grant slots after the guide pays (keep the payment reference in `note`).
+      parameters:
+      - description: Guide user ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Extra slots
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SetQuotaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.QuotaResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Grant extra gig slots to a guide
+      tags:
+      - 18. Admin · Marketplace
+  /admin/payment-methods:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.PaymentMethodResponse'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: All payment methods (incl. inactive)
+      tags:
+      - 18. Admin · Marketplace
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payment method
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaymentMethodResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Add a receiving number (bKash/Nagad/Rocket...)
+      tags:
+      - 18. Admin · Marketplace
+  /admin/payment-methods/{id}:
+    delete:
+      parameters:
+      - description: Method ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: Delete a payment method
+      tags:
+      - 18. Admin · Marketplace
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Method ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PaymentMethodPatch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaymentMethodResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Update / (de)activate a payment method
+      tags:
+      - 18. Admin · Marketplace
+  /admin/payments:
+    get:
+      parameters:
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - enum:
+        - bkash
+        - nagad
+        - rocket
+        - upay
+        - bank
+        example: bkash
+        in: query
+        name: provider
+        type: string
+      - enum:
+        - pending
+        - verified
+        - rejected
+        example: pending
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaymentPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Payments to verify
+      tags:
+      - 18. Admin · Marketplace
+  /admin/payments/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payment ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reason shown to the tourist
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/dto.ReviewPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaymentResponse'
+              type: object
+        "409":
+          description: PAYMENT_ALREADY_REVIEWED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject a payment (booking goes back to unpaid)
+      tags:
+      - 18. Admin · Marketplace
+  /admin/payments/{id}/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Payment ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Note
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/dto.ReviewPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaymentResponse'
+              type: object
+        "409":
+          description: PAYMENT_ALREADY_REVIEWED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Verify a payment (booking becomes paid)
+      tags:
+      - 18. Admin · Marketplace
+  /admin/reviews:
+    get:
+      parameters:
+      - example: ""
+        in: query
+        name: gig_id
+        type: string
+      - example: ""
+        in: query
+        name: guide_id
+        type: string
+      - example: 10
+        in: query
+        maximum: 50
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - enum:
+        - newest
+        - highest
+        - lowest
+        example: newest
+        in: query
+        name: sort
+        type: string
+      - example: ""
+        in: query
+        name: spot_id
+        type: string
+      - example: false
+        in: query
+        name: with_photos
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ReviewList'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: All reviews incl. hidden
+      tags:
+      - 18. Admin · Marketplace
+  /admin/reviews/{id}/visibility:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Review ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Visibility
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.VisibilityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ReviewResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Hide / show a review (ratings are recalculated)
+      tags:
+      - 18. Admin · Marketplace
   /admin/users:
     get:
       parameters:
@@ -1195,6 +3650,7 @@ paths:
         - user
         - guide
         - admin
+        - moderator
         example: guide
         in: query
         name: role
@@ -1256,6 +3712,52 @@ paths:
       security:
       - BearerAuth: []
       summary: Get a user
+      tags:
+      - 8. Admin
+  /admin/users/{id}/role:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Moderators can manage divisions, districts, upazilas and tourist spots (/manage/*).
+        Only `user` ⇄ `moderator` is allowed; guide and admin accounts cannot change role.
+        The user is signed out everywhere and must log in again to get the new role.
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New role
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateUserRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "404":
+          description: USER_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: ROLE_NOT_CHANGEABLE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Make a user a moderator (or back to tourist)
       tags:
       - 8. Admin
   /admin/users/{id}/status:
@@ -1934,6 +4436,932 @@ paths:
       summary: Refresh access token (rotates refresh token)
       tags:
       - 3. Auth · Login & session
+  /bookings:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Tourist accounts only. The price is fixed at booking time (`per_person` × group size or `per_group`).
+        Payment is NOT taken now: it opens after the guide marks the tour completed (`can_pay`).
+      parameters:
+      - description: Booking
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateBookingRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+        "422":
+          description: GIG_NOT_BOOKABLE | GROUP_TOO_LARGE | TOUR_DATE_IN_PAST | CANNOT_BOOK_OWN_GIG
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Book a gig
+      tags:
+      - 15. Bookings
+  /bookings/{id}:
+    get:
+      description: |-
+        Visible to the tourist, the guide and admins. Contact details of the other side appear once the
+        guide accepts. `can_*` flags tell the UI which buttons to show.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+        "404":
+          description: BOOKING_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Booking details
+      tags:
+      - 15. Bookings
+  /bookings/{id}/accept:
+    post:
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+        "409":
+          description: BOOKING_STATUS_CONFLICT
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Accept a booking request (guide)
+      tags:
+      - 15. Bookings
+  /bookings/{id}/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reason
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/dto.ReasonRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+        "409":
+          description: BOOKING_STATUS_CONFLICT
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Cancel a booking (tourist or guide, while pending/accepted)
+      tags:
+      - 15. Bookings
+  /bookings/{id}/complete:
+    post:
+      description: Allowed on/after the tour date. Opens payment and review for the
+        tourist.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+        "409":
+          description: BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark the tour as completed (guide)
+      tags:
+      - 15. Bookings
+  /bookings/{id}/payments:
+    get:
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.PaymentResponse'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Payments submitted for a booking
+      tags:
+      - 16. Payments
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Only after the tour is completed (`can_pay`). `amount` must equal `total_amount`. The payment stays
+        `pending` until an admin verifies it; then the booking's `payment_status` becomes `paid`.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Payment
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.SubmitPaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PaymentResponse'
+              type: object
+        "409":
+          description: PAYMENT_NOT_DUE | ALREADY_PAID | TRANSACTION_ID_USED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: PAYMENT_AMOUNT_MISMATCH
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit a mobile-banking payment for a completed tour
+      tags:
+      - 16. Payments
+  /bookings/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reason
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/dto.ReasonRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+        "409":
+          description: BOOKING_STATUS_CONFLICT
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject a booking request (guide)
+      tags:
+      - 15. Bookings
+  /bookings/{id}/review:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        multipart/form-data. Only the tourist of a **completed** booking, once. `rating` 1-5, optional
+        `comment` (max 2000) and up to 5 `images` (JPEG/PNG/WEBP). Updates gig, guide and spot ratings.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 1-5 stars
+        in: formData
+        name: rating
+        required: true
+        type: integer
+      - description: Your experience
+        in: formData
+        name: comment
+        type: string
+      - description: Photo (repeatable, max 5)
+        in: formData
+        name: images
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ReviewResponse'
+              type: object
+        "409":
+          description: TOUR_NOT_COMPLETED | ALREADY_REVIEWED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR | TOO_MANY_IMAGES | INVALID_IMAGE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Review a completed tour (with photos)
+      tags:
+      - 17. Reviews
+  /bookings/guide:
+    get:
+      parameters:
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - enum:
+        - unpaid
+        - submitted
+        - paid
+        - refunded
+        example: unpaid
+        in: query
+        name: payment_status
+        type: string
+      - enum:
+        - pending
+        - accepted
+        - rejected
+        - cancelled
+        - completed
+        example: pending
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Booking requests for my gigs (guide)
+      tags:
+      - 15. Bookings
+  /bookings/me:
+    get:
+      parameters:
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - enum:
+        - unpaid
+        - submitted
+        - paid
+        - refunded
+        example: unpaid
+        in: query
+        name: payment_status
+        type: string
+      - enum:
+        - pending
+        - accepted
+        - rejected
+        - cancelled
+        - completed
+        example: pending
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: My bookings (tourist)
+      tags:
+      - 15. Bookings
+  /geo/districts:
+    get:
+      description: Each district has `latitude`/`longitude` (for map markers) and
+        `spot_count` (published tourist spots).
+      parameters:
+      - example: 1
+        in: query
+        minimum: 1
+        name: division_id
+        type: integer
+      - example: cox
+        in: query
+        maxLength: 80
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.DistrictResponse'
+                  type: array
+              type: object
+      summary: List districts (জেলা) — all 64 or one division's
+      tags:
+      - 9. Geo · Public
+  /geo/districts/{id}:
+    get:
+      parameters:
+      - description: District ID (e.g. 9) or slug (e.g. coxs-bazar)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DistrictResponse'
+              type: object
+        "404":
+          description: DISTRICT_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get a district by ID or slug
+      tags:
+      - 9. Geo · Public
+  /geo/divisions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.DivisionResponse'
+                  type: array
+              type: object
+      summary: List the 8 divisions (বিভাগ)
+      tags:
+      - 9. Geo · Public
+  /geo/divisions/{id}:
+    get:
+      parameters:
+      - description: Division ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DivisionResponse'
+              type: object
+        "404":
+          description: DIVISION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get a division
+      tags:
+      - 9. Geo · Public
+  /geo/tree:
+    get:
+      description: One call for cascading dropdowns (≈ 60 KB, cached). Use the list
+        endpoints for large screens.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.TreeDivision'
+                  type: array
+              type: object
+      summary: 'Full hierarchy: division → district → upazila'
+      tags:
+      - 9. Geo · Public
+  /geo/upazilas:
+    get:
+      description: |-
+        Filter by `district_id` for a cascading dropdown. Includes Dhaka & Chattogram metropolitan
+        thanas (`type = metro_thana`). Default limit 100, max 600.
+      parameters:
+      - example: 9
+        in: query
+        minimum: 1
+        name: district_id
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: division_id
+        type: integer
+      - example: 100
+        in: query
+        maximum: 600
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - example: tek
+        in: query
+        maxLength: 80
+        name: q
+        type: string
+      - enum:
+        - upazila
+        - metro_thana
+        example: upazila
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UpazilaPage'
+              type: object
+      summary: List upazilas / thanas (উপজেলা/থানা)
+      tags:
+      - 9. Geo · Public
+  /geo/upazilas/{id}:
+    get:
+      parameters:
+      - description: Upazila ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UpazilaResponse'
+              type: object
+        "404":
+          description: UPAZILA_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Get an upazila / thana
+      tags:
+      - 9. Geo · Public
+  /gigs:
+    get:
+      description: |-
+        Only active gigs of verified, available guides on published spots. Use `spot_id` on a tourist
+        spot page ("guides for this place"), `guide_id` on a guide profile.
+      parameters:
+      - example: 28
+        in: query
+        minimum: 1
+        name: district_id
+        type: integer
+      - example: 3
+        in: query
+        minimum: 1
+        name: division_id
+        type: integer
+      - example: ""
+        in: query
+        name: guide_id
+        type: string
+      - example: en
+        in: query
+        name: language
+        type: string
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 10000
+        in: query
+        minimum: 0
+        name: max_price
+        type: integer
+      - example: 500
+        in: query
+        minimum: 0
+        name: min_price
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - example: boat
+        in: query
+        maxLength: 100
+        name: q
+        type: string
+      - enum:
+        - rating
+        - price_low
+        - price_high
+        - newest
+        - popular
+        example: rating
+        in: query
+        name: sort
+        type: string
+      - example: ""
+        in: query
+        name: spot_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigPage'
+              type: object
+      summary: Browse bookable gigs
+      tags:
+      - 14. Gigs · Public
+  /gigs/{id}:
+    get:
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "404":
+          description: GIG_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Gig details (with guide and spot)
+      tags:
+      - 14. Gigs · Public
+  /gigs/me:
+    get:
+      description: '`quota.remaining = 0` → show "get more slots" (FREE_GIG_LIMIT
+        free gigs, default 5; extra slots are paid, coming later).'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MyGigsResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: My gigs + slot quota
+      tags:
+      - 13. Guide · My gigs
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Verified guides only (KYC approved). One gig per tourist spot. Price is whole BDT,
+        `per_person` (× group size) or `per_group`. Returns 402 GIG_LIMIT_REACHED (with the quota in
+        `error.details`) when all slots are used.
+      parameters:
+      - description: Gig
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateGigRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "402":
+          description: GIG_LIMIT_REACHED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: GUIDE_NOT_VERIFIED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: GIG_ALREADY_EXISTS
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: SPOT_NOT_FOUND | VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a gig for a tourist spot
+      tags:
+      - 13. Guide · My gigs
+  /gigs/me/{id}:
+    delete:
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: GIG_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete my gig (frees a slot)
+      tags:
+      - 13. Guide · My gigs
+    get:
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "404":
+          description: GIG_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: One of my gigs (any status)
+      tags:
+      - 13. Guide · My gigs
+    patch:
+      consumes:
+      - application/json
+      description: Pause with `{"status":"paused"}`, resume with `{"status":"active"}`.
+        Suspended gigs cannot be edited.
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateGigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "403":
+          description: GIG_SUSPENDED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "404":
+          description: GIG_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update my gig (partial) — price, hours, group size, languages, status...
+      tags:
+      - 13. Guide · My gigs
+  /gigs/me/quota:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.QuotaResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: My gig slot quota
+      tags:
+      - 13. Guide · My gigs
   /guides:
     get:
       description: Only approved, active and available guides are listed. Contact
@@ -2204,6 +5632,941 @@ paths:
       summary: Allowed values for guide filters/forms
       tags:
       - 7. Guides · Public
+  /manage/geo/districts:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: District
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DistrictRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DistrictResponse'
+              type: object
+        "404":
+          description: DIVISION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: SLUG_TAKEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a district
+      tags:
+      - 11. Manage · Geo
+  /manage/geo/districts/{id}:
+    delete:
+      parameters:
+      - description: District ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "409":
+          description: GEO_IN_USE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a district (only when nothing references it)
+      tags:
+      - 11. Manage · Geo
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: District ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DistrictPatch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DistrictResponse'
+              type: object
+        "404":
+          description: DISTRICT_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a district (partial)
+      tags:
+      - 11. Manage · Geo
+  /manage/geo/divisions:
+    post:
+      consumes:
+      - application/json
+      description: '`slug` is generated from `name` when omitted.'
+      parameters:
+      - description: Division
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DivisionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DivisionResponse'
+              type: object
+        "409":
+          description: SLUG_TAKEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a division
+      tags:
+      - 11. Manage · Geo
+  /manage/geo/divisions/{id}:
+    delete:
+      parameters:
+      - description: Division ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "409":
+          description: GEO_IN_USE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a division (only when it has no districts)
+      tags:
+      - 11. Manage · Geo
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Division ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DivisionPatch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.DivisionResponse'
+              type: object
+        "404":
+          description: DIVISION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a division (partial)
+      tags:
+      - 11. Manage · Geo
+  /manage/geo/upazilas:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Upazila
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpazilaRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UpazilaResponse'
+              type: object
+        "404":
+          description: DISTRICT_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: SLUG_TAKEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an upazila / thana
+      tags:
+      - 11. Manage · Geo
+  /manage/geo/upazilas/{id}:
+    delete:
+      parameters:
+      - description: Upazila ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "409":
+          description: GEO_IN_USE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete an upazila / thana (only when no tourist spot uses it)
+      tags:
+      - 11. Manage · Geo
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Upazila ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpazilaPatch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UpazilaResponse'
+              type: object
+        "404":
+          description: UPAZILA_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update an upazila / thana (partial)
+      tags:
+      - 11. Manage · Geo
+  /manage/tourist-spots:
+    get:
+      parameters:
+      - enum:
+        - beach
+        - island
+        - hill
+        - forest
+        - waterfall
+        - lake
+        - river
+        - wetland
+        - heritage
+        - religious
+        - park
+        - city
+        - other
+        example: beach
+        in: query
+        name: category
+        type: string
+      - example: 9
+        in: query
+        minimum: 1
+        name: district_id
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: division_id
+        type: integer
+      - example: true
+        in: query
+        name: featured
+        type: boolean
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - example: beach
+        in: query
+        maxLength: 100
+        name: q
+        type: string
+      - enum:
+        - popular
+        - rating
+        - newest
+        - title
+        example: popular
+        in: query
+        name: sort
+        type: string
+      - enum:
+        - draft
+        - published
+        - archived
+        example: draft
+        in: query
+        name: status
+        type: string
+      - example: 75
+        in: query
+        minimum: 1
+        name: upazila_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List all tourist spots (drafts, published, archived)
+      tags:
+      - 12. Manage · Tourist spots
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Admins and moderators. Images can be URLs here (e.g. from autofill) and/or uploaded later via
+        POST /manage/tourist-spots/{id}/images. The first image becomes the cover. `status` defaults to `draft`.
+        `google_map_url` is generated from the coordinates when omitted.
+      parameters:
+      - description: Tourist spot
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateSpotRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotDetail'
+              type: object
+        "409":
+          description: SLUG_TAKEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR | UPAZILA_NOT_FOUND | INVALID_YOUTUBE_URL
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a tourist spot
+      tags:
+      - 12. Manage · Tourist spots
+  /manage/tourist-spots/{id}:
+    delete:
+      description: Refused while guides have gigs for it (archive it with status=archived
+        instead).
+      parameters:
+      - description: Spot ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "409":
+          description: SPOT_HAS_ACTIVE_GIGS
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a tourist spot
+      tags:
+      - 12. Manage · Tourist spots
+    get:
+      parameters:
+      - description: Spot ID or slug
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotDetail'
+              type: object
+        "404":
+          description: SPOT_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get any tourist spot (any status)
+      tags:
+      - 12. Manage · Tourist spots
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Only sent fields change. `upazila_ids`, `images`, `videos` replace the whole list when sent.
+        Publish / unpublish with `{"status":"published"}` or `{"status":"draft"}`.
+      parameters:
+      - description: Spot ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to change
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateSpotRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotDetail'
+              type: object
+        "404":
+          description: SPOT_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: SLUG_TAKEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a tourist spot (partial)
+      tags:
+      - 12. Manage · Tourist spots
+  /manage/tourist-spots/{id}/images:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        multipart/form-data, repeat the `images` field for several files (JPEG/PNG/WEBP, max
+        MAX_UPLOAD_SIZE_MB each, min 400x400). Optional `captions` in the same order. Max 50 images per spot.
+      parameters:
+      - description: Spot ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image file (repeatable)
+        in: formData
+        name: images
+        required: true
+        type: file
+      - description: Caption for each image (repeatable)
+        in: formData
+        name: captions
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotDetail'
+              type: object
+        "422":
+          description: INVALID_IMAGE | TOO_MANY_IMAGES
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: UPLOAD_UNAVAILABLE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload photos to a tourist spot
+      tags:
+      - 12. Manage · Tourist spots
+  /manage/tourist-spots/{id}/images/{imageId}:
+    delete:
+      parameters:
+      - description: Spot ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Image ID
+        format: uuid
+        in: path
+        name: imageId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: IMAGE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Remove one image from a tourist spot
+      tags:
+      - 12. Manage · Tourist spots
+  /manage/tourist-spots/autofill:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Type a name (e.g. "Ratargul Swamp Forest") and get a ready draft: description, highlights,
+        coordinates, Google Maps link, photos, YouTube videos, suggested upazilas (nearest to the
+        coordinates) and category. Nothing is saved — review it, then POST `data.draft` to /manage/tourist-spots.
+        Wikipedia is always used; YouTube, Google image search and AI writing need their API keys
+        (see `data.notes`).
+      parameters:
+      - description: Spot name
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AutofillRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AutofillResponse'
+              type: object
+        "404":
+          description: AUTOFILL_NO_RESULT
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "502":
+          description: AUTOFILL_FAILED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Auto-fill a tourist spot from its name (Wikipedia / Google / YouTube
+        / AI)
+      tags:
+      - 12. Manage · Tourist spots
+  /meta/countries:
+    get:
+      description: |-
+        250 countries sorted by name: ISO code (send it as `country_code`), dial code, emoji and
+        flag image URLs from the free flagcdn.com CDN. Cached for a day.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/meta.Country'
+                  type: array
+              type: object
+      summary: Countries with flags (for the country dropdown)
+      tags:
+      - 0. Meta
+  /payment-methods:
+    get:
+      description: |-
+        Default payment option: send the booking total to one of these numbers ("Send Money"/"Payment"),
+        then submit the transaction ID with POST /bookings/{id}/payments.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.PaymentMethodResponse'
+                  type: array
+              type: object
+      summary: Where to send money (bKash / Nagad / Rocket numbers)
+      tags:
+      - 16. Payments
+  /reviews:
+    get:
+      description: Pass one of `gig_id`, `guide_id`, `spot_id`. Includes a star breakdown
+        summary.
+      parameters:
+      - example: ""
+        in: query
+        name: gig_id
+        type: string
+      - example: ""
+        in: query
+        name: guide_id
+        type: string
+      - example: 10
+        in: query
+        maximum: 50
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - enum:
+        - newest
+        - highest
+        - lowest
+        example: newest
+        in: query
+        name: sort
+        type: string
+      - example: ""
+        in: query
+        name: spot_id
+        type: string
+      - example: false
+        in: query
+        name: with_photos
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ReviewList'
+              type: object
+      summary: Reviews for a gig, a guide or a tourist spot
+      tags:
+      - 17. Reviews
+  /reviews/{id}/reply:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Review ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reply
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ReplyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ReviewResponse'
+              type: object
+        "409":
+          description: ALREADY_REPLIED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reply to a review of my tour (guide, once)
+      tags:
+      - 17. Reviews
+  /tourist-spots:
+    get:
+      description: |-
+        Grid/search for tourists. Filter by division, district (also matches spots that span a
+        district through a second upazila), upazila, category, featured or free text.
+      parameters:
+      - enum:
+        - beach
+        - island
+        - hill
+        - forest
+        - waterfall
+        - lake
+        - river
+        - wetland
+        - heritage
+        - religious
+        - park
+        - city
+        - other
+        example: beach
+        in: query
+        name: category
+        type: string
+      - example: 9
+        in: query
+        minimum: 1
+        name: district_id
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: division_id
+        type: integer
+      - example: true
+        in: query
+        name: featured
+        type: boolean
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - example: beach
+        in: query
+        maxLength: 100
+        name: q
+        type: string
+      - enum:
+        - popular
+        - rating
+        - newest
+        - title
+        example: popular
+        in: query
+        name: sort
+        type: string
+      - example: 75
+        in: query
+        minimum: 1
+        name: upazila_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotPage'
+              type: object
+      summary: Browse tourist spots (published)
+      tags:
+      - 10. Tourist spots · Public
+  /tourist-spots/{id}:
+    get:
+      description: |-
+        Full page: description, highlights, all images (1-50), YouTube videos (with embed/thumbnail
+        URLs), upazilas/thanas, Google Maps link. Accepts the UUID or the slug.
+      parameters:
+      - description: Spot ID or slug (e.g. sajek-valley)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotDetail'
+              type: object
+        "404":
+          description: SPOT_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Tourist spot details
+      tags:
+      - 10. Tourist spots · Public
+  /tourist-spots/map:
+    get:
+      description: |-
+        Every published spot with coordinates, cover image, title and rating — enough for the
+        64-district hero map and its hover card. Group by `district_id` / `district_slug` to colour districts.
+      parameters:
+      - example: 9
+        in: query
+        minimum: 1
+        name: district_id
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: division_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.MapMarker'
+                  type: array
+              type: object
+      summary: Map markers for the Bangladesh map
+      tags:
+      - 10. Tourist spots · Public
+  /tourist-spots/options:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OptionsResponse'
+              type: object
+      summary: Allowed categories / statuses / limits
+      tags:
+      - 10. Tourist spots · Public
   /users/me:
     delete:
       consumes:

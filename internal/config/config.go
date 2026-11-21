@@ -28,6 +28,8 @@ type Config struct {
 	SMS        SMSConfig
 	Mail       MailConfig
 	Admin      AdminConfig
+	Autofill   AutofillConfig
+	Market     MarketConfig
 }
 
 type AppConfig struct {
@@ -131,6 +133,20 @@ type AdminConfig struct {
 	FullName string
 }
 
+// AutofillConfig: optional sources for the tourist spot autofill (Wikipedia needs no key).
+type AutofillConfig struct {
+	YouTubeAPIKey      string
+	GoogleSearchAPIKey string
+	GoogleSearchCX     string
+	AIEnabled          bool // uses ANTHROPIC_API_KEY (read by the Anthropic SDK)
+	AIModel            string
+}
+
+// MarketConfig: guide marketplace rules.
+type MarketConfig struct {
+	FreeGigLimit int // gigs a guide may publish without buying extra slots
+}
+
 // Load reads configuration. It returns an error describing every invalid value.
 func Load() (*Config, error) {
 	_ = godotenv.Load()
@@ -225,6 +241,16 @@ func Load() (*Config, error) {
 			Password: p.str("ADMIN_PASSWORD", ""),
 			FullName: p.str("ADMIN_FULL_NAME", "Platform Admin"),
 		},
+		Autofill: AutofillConfig{
+			YouTubeAPIKey:      p.str("YOUTUBE_API_KEY", ""),
+			GoogleSearchAPIKey: p.str("GOOGLE_SEARCH_API_KEY", ""),
+			GoogleSearchCX:     p.str("GOOGLE_SEARCH_CX", ""),
+			AIEnabled:          p.boolean("AI_AUTOFILL_ENABLED", false),
+			AIModel:            p.str("AI_AUTOFILL_MODEL", "claude-opus-5-5"),
+		},
+		Market: MarketConfig{
+			FreeGigLimit: p.integer("FREE_GIG_LIMIT", 5),
+		},
 	}
 
 	cfg.validate(&errs)
@@ -266,6 +292,12 @@ func (c *Config) validate(errs *[]error) {
 	}
 	if d := c.OTP.DevCode; d != "" && (len(d) != c.OTP.Length || strings.Trim(d, "0123456789") != "") {
 		add("DEV_OTP_CODE must be exactly OTP_LENGTH digits")
+	}
+	if c.Autofill.AIEnabled && os.Getenv("ANTHROPIC_API_KEY") == "" {
+		add("ANTHROPIC_API_KEY is required when AI_AUTOFILL_ENABLED=true")
+	}
+	if c.Market.FreeGigLimit < 0 || c.Market.FreeGigLimit > 100 {
+		add("FREE_GIG_LIMIT must be between 0 and 100")
 	}
 	if c.Captcha.Enabled && c.Captcha.SecretKey == "" {
 		add("TURNSTILE_SECRET_KEY is required when CAPTCHA_ENABLED=true")

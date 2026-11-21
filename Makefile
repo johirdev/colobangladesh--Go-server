@@ -32,7 +32,7 @@ lint:
 	go vet ./...
 
 # ---- data / state (dev). Inside Docker use: docker compose exec api manage <cmd>
-seed:            ## 3 tourists, 3 guides, 1 admin (password: Password123)
+seed:            ## accounts + BD geo data + 20 tourist spots + demo gigs (password: Password123)
 	go run ./cmd/manage seed
 
 fresh:           ## drop DB + flush Redis + seed

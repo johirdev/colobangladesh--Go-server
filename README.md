@@ -1,4 +1,4 @@
-# CholoBangladesh API — User Module
+# CholoBangladesh API
 
 A Go (Gin) backend for a tourist platform. Tourists (`user`) browse and book **verified local guides** (`guide`).
 
@@ -102,6 +102,7 @@ Running it again is safe: accounts that already exist are skipped. **Every seede
 | Role | Name | Login (email) | Login (phone) | Notes |
 |---|---|---|---|---|
 | admin | Super Admin | `admin@cholobangladesh.com` | — | Can review KYC and suspend users |
+| moderator | Content Moderator | `moderator@cholobangladesh.com` | — | Manages divisions, districts, upazilas and tourist spots (`/manage/*`) |
 | user | Emma Watson | `emma@example.com` | — | Tourist 🇬🇧 London, onboarding done |
 | user | John Carter | `john@example.com` | — | Tourist 🇺🇸 New York |
 | user | Tanvir Ahmed | `tanvir@example.com` | — | Local tourist 🇧🇩 Chattogram |
@@ -252,3 +253,24 @@ The frontend reads `user.onboarding.next_step` after every login to decide which
 * `CAPTCHA_ENABLED=true` + `TURNSTILE_SECRET_KEY`; set `GOOGLE_CLIENT_IDS` and `APPLE_CLIENT_IDS`.
 * Run behind TLS (nginx/Caddy/Cloudflare). Set `SWAGGER_ENABLED=false` if the docs must not be public.
 * Back up Postgres, and back up `DATA_ENCRYPTION_KEY` separately (without it stored NIDs cannot be decrypted).
+
+---
+
+## Marketplace modules (geo → tourist spots → gigs → bookings → payments → reviews)
+
+| Module | Folder | What it does | Who |
+|---|---|---|---|
+| **meta** | `internal/modules/meta` | `GET /meta/countries`: 250 countries with ISO code, dial code, emoji and flag images (free CDN `flagcdn.com`) for the country dropdown | public |
+| **geo** | `internal/modules/geo` | 8 divisions, 64 districts (with lat/lng), 495 upazilas + 65 Dhaka/Chattogram metro thanas. `GET /geo/tree` for cascading dropdowns | public read · admin + moderator write (`/manage/geo`) |
+| **spot** | `internal/modules/spot` | Tourist spots: title, Bangla title, subtitle, category, location, description, highlights, best time, Google Maps link, lat/lng, **1–5 upazilas** (one spot can be in 2 thanas, e.g. Sundarbans = Mongla + Shyamnagar), **1–50 images** (URLs or Cloudinary upload), **YouTube videos**. `GET /tourist-spots/map` feeds the Bangladesh hero map | public read · admin + moderator write (`/manage/tourist-spots`) |
+| **gig** | `internal/modules/gig` | Verified guides (KYC approved) publish one gig per spot with price (`per_person`/`per_group`), hours, group size, languages, includes/excludes, days, meeting point. **`FREE_GIG_LIMIT` (5) free**, more needs extra slots (admin grants now: `PUT /admin/guides/{id}/gig-quota`; paid purchase later) → `402 GIG_LIMIT_REACHED` | guide · public · admin |
+| **booking** | `internal/modules/booking` | Book → guide accepts → tour → guide completes → tourist pays (**default: bKash/Nagad/Rocket number + transaction ID**, admin verifies) | tourist · guide · admin |
+| **review** | `internal/modules/review` | 1–5 stars, comment, up to 5 photos after a completed tour; guide reply; admin hide. Ratings roll up to gig, guide and spot | tourist · guide · admin |
+
+All endpoints are documented in Swagger (`/swagger/index.html`, tags 9–18).
+
+**Tourist spot autofill** (`POST /manage/tourist-spots/autofill {"name": "..."}`): returns an unsaved draft. Wikipedia/Wikimedia Commons always works (no key). Optional: `YOUTUBE_API_KEY` (videos), `GOOGLE_SEARCH_API_KEY` + `GOOGLE_SEARCH_CX` (more photos), `AI_AUTOFILL_ENABLED=true` + `ANTHROPIC_API_KEY` (Claude writes subtitle, description, highlights, best time, Bangla title).
+
+**Default data** (`manage seed`): geo data is also loaded automatically on first start. The 20 default tourist spots (`internal/seed/data/tourist_spots.json`) use text/coordinates from Wikipedia, photos from Wikimedia Commons (attribution in `source_url`) and YouTube links; admins/moderators can edit everything. Demo bKash/Nagad numbers (`01700000000`, `01800000000`) **must be replaced** in Admin → payment methods before going live.
+
+**Adding a future module** (food, culture, hotels, transport booking): create `internal/modules/<name>` with the same `domain / dto / repository / service / handler / module.go` layout, reference `district_id` / `spot_id` in its migration, add it to `apphttp.NewRouter(...)` in `cmd/server/main.go`, and give its handlers a new swagger tag.

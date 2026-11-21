@@ -155,6 +155,7 @@ func (m *Module) Routes(rg *gin.RouterGroup) {
 		adm.GET("/users", h.AdminListUsers)
 		adm.GET("/users/:id", h.AdminGetUser)
 		adm.PATCH("/users/:id/status", h.AdminSetUserStatus)
+		adm.PATCH("/users/:id/role", h.AdminSetUserRole)
 		adm.GET("/guide-verifications", h.AdminListVerifications)
 		adm.GET("/guide-verifications/:id", h.AdminGetVerification)
 		adm.POST("/guide-verifications/:id/approve", h.AdminApproveVerification)

@@ -41,6 +41,7 @@ var (
 	ErrVerificationReviewed   = apperror.New(http.StatusConflict, "VERIFICATION_ALREADY_REVIEWED", "this request has already been reviewed")
 	ErrStorageUnavailable     = apperror.New(http.StatusServiceUnavailable, "UPLOAD_UNAVAILABLE", "file uploads are temporarily unavailable")
 	ErrCannotModifyAdmin      = apperror.New(http.StatusForbidden, "CANNOT_MODIFY_ADMIN", "admin accounts cannot be changed here")
+	ErrRoleNotChangeable      = apperror.New(http.StatusConflict, "ROLE_NOT_CHANGEABLE", "only tourist and moderator accounts can switch roles")
 	ErrDeleteConfirmation     = apperror.New(http.StatusUnprocessableEntity, "DELETE_CONFIRMATION_REQUIRED", `type "DELETE" to confirm`)
 	ErrUnderage               = apperror.New(http.StatusUnprocessableEntity, "UNDERAGE", "you must be at least 18 years old to be a guide")
 	ErrContactAlreadyYours    = apperror.New(http.StatusConflict, "CONTACT_ALREADY_VERIFIED", "this contact is already verified on your account")

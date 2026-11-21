@@ -49,6 +49,273 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/bookings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "All bookings",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "unpaid",
+                            "submitted",
+                            "paid",
+                            "refunded"
+                        ],
+                        "type": "string",
+                        "example": "unpaid",
+                        "name": "payment_status",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "cancelled",
+                            "completed"
+                        ],
+                        "type": "string",
+                        "example": "pending",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gigs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "List all gigs (any status)",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 28,
+                        "name": "district_id",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 3,
+                        "name": "division_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "guide_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "en",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "example": 10000,
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "example": 500,
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "example": "boat",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "rating",
+                            "price_low",
+                            "price_high",
+                            "newest",
+                            "popular"
+                        ],
+                        "type": "string",
+                        "example": "rating",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "spot_id",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "draft",
+                            "active",
+                            "paused",
+                            "suspended"
+                        ],
+                        "type": "string",
+                        "example": "active",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/gigs/{id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Suspend / re-activate a gig",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Status",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AdminGigStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/admin/guide-verifications": {
             "get": {
                 "security": [
@@ -260,6 +527,591 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/guides/{id}/gig-quota": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Total gigs allowed = FREE_GIG_LIMIT + extra_slots. Until online slot purchase exists, admins\ngrant slots after the guide pays (keep the payment reference in ` + "`" + `note` + "`" + `).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Grant extra gig slots to a guide",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guide user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Extra slots",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SetQuotaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.QuotaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/payment-methods": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "All payment methods (incl. inactive)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.PaymentMethodResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Add a receiving number (bKash/Nagad/Rocket...)",
+                "parameters": [
+                    {
+                        "description": "Payment method",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PaymentMethodResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/payment-methods/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Delete a payment method",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Update / (de)activate a payment method",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Method ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PaymentMethodPatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PaymentMethodResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Payments to verify",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "bkash",
+                            "nagad",
+                            "rocket",
+                            "upay",
+                            "bank"
+                        ],
+                        "type": "string",
+                        "example": "bkash",
+                        "name": "provider",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "verified",
+                            "rejected"
+                        ],
+                        "type": "string",
+                        "example": "pending",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PaymentPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/payments/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Reject a payment (booking goes back to unpaid)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reason shown to the tourist",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReviewPaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PaymentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "PAYMENT_ALREADY_REVIEWED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/payments/{id}/verify": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Verify a payment (booking becomes paid)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Payment ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Note",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReviewPaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PaymentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "PAYMENT_ALREADY_REVIEWED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reviews": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "All reviews incl. hidden",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "gig_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "guide_id",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 10,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "newest",
+                            "highest",
+                            "lowest"
+                        ],
+                        "type": "string",
+                        "example": "newest",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "spot_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": false,
+                        "name": "with_photos",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.ReviewList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/reviews/{id}/visibility": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Hide / show a review (ratings are recalculated)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Visibility",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.VisibilityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.ReviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/admin/users": {
             "get": {
                 "security": [
@@ -301,7 +1153,8 @@ const docTemplate = `{
                         "enum": [
                             "user",
                             "guide",
-                            "admin"
+                            "admin",
+                            "moderator"
                         ],
                         "type": "string",
                         "example": "guide",
@@ -393,6 +1246,77 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "USER_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/role": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Moderators can manage divisions, districts, upazilas and tourist spots (/manage/*).\nOnly ` + "`" + `user` + "`" + ` ⇄ ` + "`" + `moderator` + "`" + ` is allowed; guide and admin accounts cannot change role.\nThe user is signed out everywhere and must log in again to get the new role.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "Make a user a moderator (or back to tourist)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New role",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateUserRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "USER_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "ROLE_NOT_CHANGEABLE",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -1454,6 +2378,1507 @@ const docTemplate = `{
                 }
             }
         },
+        "/bookings": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tourist accounts only. The price is fixed at booking time (` + "`" + `per_person` + "`" + ` × group size or ` + "`" + `per_group` + "`" + `).\nPayment is NOT taken now: it opens after the guide marks the tour completed (` + "`" + `can_pay` + "`" + `).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "Book a gig",
+                "parameters": [
+                    {
+                        "description": "Booking",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateBookingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "GIG_NOT_BOOKABLE | GROUP_TOO_LARGE | TOUR_DATE_IN_PAST | CANNOT_BOOK_OWN_GIG",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/guide": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "Booking requests for my gigs (guide)",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "unpaid",
+                            "submitted",
+                            "paid",
+                            "refunded"
+                        ],
+                        "type": "string",
+                        "example": "unpaid",
+                        "name": "payment_status",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "cancelled",
+                            "completed"
+                        ],
+                        "type": "string",
+                        "example": "pending",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "My bookings (tourist)",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "unpaid",
+                            "submitted",
+                            "paid",
+                            "refunded"
+                        ],
+                        "type": "string",
+                        "example": "unpaid",
+                        "name": "payment_status",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "accepted",
+                            "rejected",
+                            "cancelled",
+                            "completed"
+                        ],
+                        "type": "string",
+                        "example": "pending",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Visible to the tourist, the guide and admins. Contact details of the other side appear once the\nguide accepts. ` + "`" + `can_*` + "`" + ` flags tell the UI which buttons to show.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "Booking details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "BOOKING_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/accept": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "Accept a booking request (guide)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "BOOKING_STATUS_CONFLICT",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "Cancel a booking (tourist or guide, while pending/accepted)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reason",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReasonRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "BOOKING_STATUS_CONFLICT",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/complete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Allowed on/after the tour date. Opens payment and review for the tourist.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "Mark the tour as completed (guide)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "16. Payments"
+                ],
+                "summary": "Payments submitted for a booking",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.PaymentResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Only after the tour is completed (` + "`" + `can_pay` + "`" + `). ` + "`" + `amount` + "`" + ` must equal ` + "`" + `total_amount` + "`" + `. The payment stays\n` + "`" + `pending` + "`" + ` until an admin verifies it; then the booking's ` + "`" + `payment_status` + "`" + ` becomes ` + "`" + `paid` + "`" + `.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "16. Payments"
+                ],
+                "summary": "Submit a mobile-banking payment for a completed tour",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.SubmitPaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PaymentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "PAYMENT_NOT_DUE | ALREADY_PAID | TRANSACTION_ID_USED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "PAYMENT_AMOUNT_MISMATCH",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "15. Bookings"
+                ],
+                "summary": "Reject a booking request (guide)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reason",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReasonRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "BOOKING_STATUS_CONFLICT",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/review": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "multipart/form-data. Only the tourist of a **completed** booking, once. ` + "`" + `rating` + "`" + ` 1-5, optional\n` + "`" + `comment` + "`" + ` (max 2000) and up to 5 ` + "`" + `images` + "`" + ` (JPEG/PNG/WEBP). Updates gig, guide and spot ratings.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "17. Reviews"
+                ],
+                "summary": "Review a completed tour (with photos)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1-5 stars",
+                        "name": "rating",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Your experience",
+                        "name": "comment",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Photo (repeatable, max 5)",
+                        "name": "images",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.ReviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "TOUR_NOT_COMPLETED | ALREADY_REVIEWED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR | TOO_MANY_IMAGES | INVALID_IMAGE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/geo/districts": {
+            "get": {
+                "description": "Each district has ` + "`" + `latitude` + "`" + `/` + "`" + `longitude` + "`" + ` (for map markers) and ` + "`" + `spot_count` + "`" + ` (published tourist spots).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "9. Geo · Public"
+                ],
+                "summary": "List districts (জেলা) — all 64 or one division's",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "division_id",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 80,
+                        "type": "string",
+                        "example": "cox",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.DistrictResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/geo/districts/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "9. Geo · Public"
+                ],
+                "summary": "Get a district by ID or slug",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "District ID (e.g. 9) or slug (e.g. coxs-bazar)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DistrictResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "DISTRICT_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/geo/divisions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "9. Geo · Public"
+                ],
+                "summary": "List the 8 divisions (বিভাগ)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.DivisionResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/geo/divisions/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "9. Geo · Public"
+                ],
+                "summary": "Get a division",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Division ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DivisionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "DIVISION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/geo/tree": {
+            "get": {
+                "description": "One call for cascading dropdowns (≈ 60 KB, cached). Use the list endpoints for large screens.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "9. Geo · Public"
+                ],
+                "summary": "Full hierarchy: division → district → upazila",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.TreeDivision"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/geo/upazilas": {
+            "get": {
+                "description": "Filter by ` + "`" + `district_id` + "`" + ` for a cascading dropdown. Includes Dhaka \u0026 Chattogram metropolitan\nthanas (` + "`" + `type = metro_thana` + "`" + `). Default limit 100, max 600.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "9. Geo · Public"
+                ],
+                "summary": "List upazilas / thanas (উপজেলা/থানা)",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 9,
+                        "name": "district_id",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "division_id",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 600,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 100,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 80,
+                        "type": "string",
+                        "example": "tek",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "upazila",
+                            "metro_thana"
+                        ],
+                        "type": "string",
+                        "example": "upazila",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UpazilaPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/geo/upazilas/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "9. Geo · Public"
+                ],
+                "summary": "Get an upazila / thana",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Upazila ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UpazilaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "UPAZILA_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/gigs": {
+            "get": {
+                "description": "Only active gigs of verified, available guides on published spots. Use ` + "`" + `spot_id` + "`" + ` on a tourist\nspot page (\"guides for this place\"), ` + "`" + `guide_id` + "`" + ` on a guide profile.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "14. Gigs · Public"
+                ],
+                "summary": "Browse bookable gigs",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 28,
+                        "name": "district_id",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 3,
+                        "name": "division_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "guide_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "en",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "example": 10000,
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "example": 500,
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "example": "boat",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "rating",
+                            "price_low",
+                            "price_high",
+                            "newest",
+                            "popular"
+                        ],
+                        "type": "string",
+                        "example": "rating",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "spot_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/gigs/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "` + "`" + `quota.remaining = 0` + "`" + ` → show \"get more slots\" (FREE_GIG_LIMIT free gigs, default 5; extra slots are paid, coming later).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "My gigs + slot quota",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MyGigsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Verified guides only (KYC approved). One gig per tourist spot. Price is whole BDT,\n` + "`" + `per_person` + "`" + ` (× group size) or ` + "`" + `per_group` + "`" + `. Returns 402 GIG_LIMIT_REACHED (with the quota in\n` + "`" + `error.details` + "`" + `) when all slots are used.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "Create a gig for a tourist spot",
+                "parameters": [
+                    {
+                        "description": "Gig",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateGigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "402": {
+                        "description": "GIG_LIMIT_REACHED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "GUIDE_NOT_VERIFIED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "GIG_ALREADY_EXISTS",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "SPOT_NOT_FOUND | VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/gigs/me/quota": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "My gig slot quota",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.QuotaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/gigs/me/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "One of my gigs (any status)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "GIG_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "Delete my gig (frees a slot)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "404": {
+                        "description": "GIG_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Pause with ` + "`" + `{\"status\":\"paused\"}` + "`" + `, resume with ` + "`" + `{\"status\":\"active\"}` + "`" + `. Suspended gigs cannot be edited.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "Update my gig (partial) — price, hours, group size, languages, status...",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateGigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "GIG_SUSPENDED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "GIG_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/gigs/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "14. Gigs · Public"
+                ],
+                "summary": "Gig details (with guide and spot)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "GIG_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/guides": {
             "get": {
                 "description": "Only approved, active and available guides are listed. Contact info is never exposed.",
@@ -1876,6 +4301,1487 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "GUIDE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/geo/districts": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Create a district",
+                "parameters": [
+                    {
+                        "description": "District",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.DistrictRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DistrictResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "DIVISION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "SLUG_TAKEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/geo/districts/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Delete a district (only when nothing references it)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "District ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "409": {
+                        "description": "GEO_IN_USE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Update a district (partial)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "District ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.DistrictPatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DistrictResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "DISTRICT_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/geo/divisions": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "` + "`" + `slug` + "`" + ` is generated from ` + "`" + `name` + "`" + ` when omitted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Create a division",
+                "parameters": [
+                    {
+                        "description": "Division",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.DivisionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DivisionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "SLUG_TAKEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/geo/divisions/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Delete a division (only when it has no districts)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Division ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "409": {
+                        "description": "GEO_IN_USE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Update a division (partial)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Division ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.DivisionPatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.DivisionResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "DIVISION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/geo/upazilas": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Create an upazila / thana",
+                "parameters": [
+                    {
+                        "description": "Upazila",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpazilaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UpazilaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "DISTRICT_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "SLUG_TAKEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/geo/upazilas/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Delete an upazila / thana (only when no tourist spot uses it)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Upazila ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "409": {
+                        "description": "GEO_IN_USE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "11. Manage · Geo"
+                ],
+                "summary": "Update an upazila / thana (partial)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Upazila ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpazilaPatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UpazilaResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "UPAZILA_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/tourist-spots": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "List all tourist spots (drafts, published, archived)",
+                "parameters": [
+                    {
+                        "enum": [
+                            "beach",
+                            "island",
+                            "hill",
+                            "forest",
+                            "waterfall",
+                            "lake",
+                            "river",
+                            "wetland",
+                            "heritage",
+                            "religious",
+                            "park",
+                            "city",
+                            "other"
+                        ],
+                        "type": "string",
+                        "example": "beach",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 9,
+                        "name": "district_id",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "division_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": true,
+                        "name": "featured",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "example": "beach",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "popular",
+                            "rating",
+                            "newest",
+                            "title"
+                        ],
+                        "type": "string",
+                        "example": "popular",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "draft",
+                            "published",
+                            "archived"
+                        ],
+                        "type": "string",
+                        "example": "draft",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 75,
+                        "name": "upazila_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Admins and moderators. Images can be URLs here (e.g. from autofill) and/or uploaded later via\nPOST /manage/tourist-spots/{id}/images. The first image becomes the cover. ` + "`" + `status` + "`" + ` defaults to ` + "`" + `draft` + "`" + `.\n` + "`" + `google_map_url` + "`" + ` is generated from the coordinates when omitted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Create a tourist spot",
+                "parameters": [
+                    {
+                        "description": "Tourist spot",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CreateSpotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "SLUG_TAKEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR | UPAZILA_NOT_FOUND | INVALID_YOUTUBE_URL",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/tourist-spots/autofill": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Type a name (e.g. \"Ratargul Swamp Forest\") and get a ready draft: description, highlights,\ncoordinates, Google Maps link, photos, YouTube videos, suggested upazilas (nearest to the\ncoordinates) and category. Nothing is saved — review it, then POST ` + "`" + `data.draft` + "`" + ` to /manage/tourist-spots.\nWikipedia is always used; YouTube, Google image search and AI writing need their API keys\n(see ` + "`" + `data.notes` + "`" + `).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Auto-fill a tourist spot from its name (Wikipedia / Google / YouTube / AI)",
+                "parameters": [
+                    {
+                        "description": "Spot name",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AutofillRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AutofillResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "AUTOFILL_NO_RESULT",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "AUTOFILL_FAILED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/tourist-spots/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Get any tourist spot (any status)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Spot ID or slug",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "SPOT_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Refused while guides have gigs for it (archive it with status=archived instead).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Delete a tourist spot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Spot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "409": {
+                        "description": "SPOT_HAS_ACTIVE_GIGS",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Only sent fields change. ` + "`" + `upazila_ids` + "`" + `, ` + "`" + `images` + "`" + `, ` + "`" + `videos` + "`" + ` replace the whole list when sent.\nPublish / unpublish with ` + "`" + `{\"status\":\"published\"}` + "`" + ` or ` + "`" + `{\"status\":\"draft\"}` + "`" + `.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Update a tourist spot (partial)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Spot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to change",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateSpotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "SPOT_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "SLUG_TAKEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/tourist-spots/{id}/images": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "multipart/form-data, repeat the ` + "`" + `images` + "`" + ` field for several files (JPEG/PNG/WEBP, max\nMAX_UPLOAD_SIZE_MB each, min 400x400). Optional ` + "`" + `captions` + "`" + ` in the same order. Max 50 images per spot.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Upload photos to a tourist spot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Spot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Image file (repeatable)",
+                        "name": "images",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Caption for each image (repeatable)",
+                        "name": "captions",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_IMAGE | TOO_MANY_IMAGES",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "UPLOAD_UNAVAILABLE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/tourist-spots/{id}/images/{imageId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Remove one image from a tourist spot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Spot ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Image ID",
+                        "name": "imageId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "404": {
+                        "description": "IMAGE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/meta/countries": {
+            "get": {
+                "description": "250 countries sorted by name: ISO code (send it as ` + "`" + `country_code` + "`" + `), dial code, emoji and\nflag image URLs from the free flagcdn.com CDN. Cached for a day.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "0. Meta"
+                ],
+                "summary": "Countries with flags (for the country dropdown)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/meta.Country"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/payment-methods": {
+            "get": {
+                "description": "Default payment option: send the booking total to one of these numbers (\"Send Money\"/\"Payment\"),\nthen submit the transaction ID with POST /bookings/{id}/payments.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "16. Payments"
+                ],
+                "summary": "Where to send money (bKash / Nagad / Rocket numbers)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.PaymentMethodResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/reviews": {
+            "get": {
+                "description": "Pass one of ` + "`" + `gig_id` + "`" + `, ` + "`" + `guide_id` + "`" + `, ` + "`" + `spot_id` + "`" + `. Includes a star breakdown summary.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "17. Reviews"
+                ],
+                "summary": "Reviews for a gig, a guide or a tourist spot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "gig_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "guide_id",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 10,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "newest",
+                            "highest",
+                            "lowest"
+                        ],
+                        "type": "string",
+                        "example": "newest",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "",
+                        "name": "spot_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": false,
+                        "name": "with_photos",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.ReviewList"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/reviews/{id}/reply": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "17. Reviews"
+                ],
+                "summary": "Reply to a review of my tour (guide, once)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Review ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reply",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ReplyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.ReviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "ALREADY_REPLIED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/tourist-spots": {
+            "get": {
+                "description": "Grid/search for tourists. Filter by division, district (also matches spots that span a\ndistrict through a second upazila), upazila, category, featured or free text.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "10. Tourist spots · Public"
+                ],
+                "summary": "Browse tourist spots (published)",
+                "parameters": [
+                    {
+                        "enum": [
+                            "beach",
+                            "island",
+                            "hill",
+                            "forest",
+                            "waterfall",
+                            "lake",
+                            "river",
+                            "wetland",
+                            "heritage",
+                            "religious",
+                            "park",
+                            "city",
+                            "other"
+                        ],
+                        "type": "string",
+                        "example": "beach",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 9,
+                        "name": "district_id",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "division_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": true,
+                        "name": "featured",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "example": "beach",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "popular",
+                            "rating",
+                            "newest",
+                            "title"
+                        ],
+                        "type": "string",
+                        "example": "popular",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 75,
+                        "name": "upazila_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tourist-spots/map": {
+            "get": {
+                "description": "Every published spot with coordinates, cover image, title and rating — enough for the\n64-district hero map and its hover card. Group by ` + "`" + `district_id` + "`" + ` / ` + "`" + `district_slug` + "`" + ` to colour districts.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "10. Tourist spots · Public"
+                ],
+                "summary": "Map markers for the Bangladesh map",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 9,
+                        "name": "district_id",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "division_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.MapMarker"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tourist-spots/options": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "10. Tourist spots · Public"
+                ],
+                "summary": "Allowed categories / statuses / limits",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OptionsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/tourist-spots/{id}": {
+            "get": {
+                "description": "Full page: description, highlights, all images (1-50), YouTube videos (with embed/thumbnail\nURLs), upazilas/thanas, Google Maps link. Accepts the UUID or the slug.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "10. Tourist spots · Public"
+                ],
+                "summary": "Tourist spot details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Spot ID or slug (e.g. sajek-valley)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotDetail"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "SPOT_NOT_FOUND",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -2497,6 +6403,27 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AdminGigStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Misleading description"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "suspended"
+                    ],
+                    "example": "suspended"
+                }
+            }
+        },
         "dto.AdminUserPage": {
             "type": "object",
             "properties": {
@@ -2701,6 +6628,85 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Author": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "country_code": {
+                    "type": "string",
+                    "example": "GB"
+                },
+                "flag_url": {
+                    "type": "string",
+                    "example": "https://flagcdn.com/w40/gb.png"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Emma Watson"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                }
+            }
+        },
+        "dto.AutofillRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "district_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 36
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 2,
+                    "example": "Ratargul Swamp Forest"
+                }
+            }
+        },
+        "dto.AutofillResponse": {
+            "type": "object",
+            "properties": {
+                "draft": {
+                    "$ref": "#/definitions/dto.CreateSpotRequest"
+                },
+                "notes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "YouTube: set YOUTUBE_API_KEY to fetch videos automatically"
+                    ]
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "wikipedia",
+                        "youtube",
+                        "google_images",
+                        "ai"
+                    ]
+                },
+                "suggested_upazilas": {
+                    "description": "nearest upazilas to the coordinates",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.UpazilaRef"
+                    }
+                }
+            }
+        },
         "dto.AvailabilityRequest": {
             "type": "object",
             "required": [
@@ -2710,6 +6716,202 @@ const docTemplate = `{
                 "is_available": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "dto.BookingGig": {
+            "type": "object",
+            "properties": {
+                "duration_hours": {
+                    "type": "number",
+                    "example": 8
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "meeting_point": {
+                    "type": "string",
+                    "example": "Mongla ferry ghat"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Full-day Sundarbans boat safari"
+                }
+            }
+        },
+        "dto.BookingPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.BookingResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.BookingResponse": {
+            "type": "object",
+            "properties": {
+                "accepted_at": {
+                    "type": "string"
+                },
+                "can_accept": {
+                    "description": "Actions the current user may take — drive the buttons from these.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "can_cancel": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "can_complete": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "can_pay": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "can_reject": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "can_review": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "cancelled_at": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "CB7K3D9QXA"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "gig": {
+                    "$ref": "#/definitions/dto.BookingGig"
+                },
+                "group_size": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "guide": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                },
+                "guide_contact": {
+                    "description": "visible to the tourist once accepted",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Contact"
+                        }
+                    ]
+                },
+                "has_review": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "payment_status": {
+                    "type": "string",
+                    "enum": [
+                        "unpaid",
+                        "submitted",
+                        "paid",
+                        "refunded"
+                    ],
+                    "example": "unpaid"
+                },
+                "pricing_type": {
+                    "type": "string",
+                    "example": "per_group"
+                },
+                "spot": {
+                    "$ref": "#/definitions/dto.BookingSpot"
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "08:00"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "accepted",
+                        "rejected",
+                        "cancelled",
+                        "completed"
+                    ],
+                    "example": "pending"
+                },
+                "status_reason": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "integer",
+                    "example": 6000
+                },
+                "tour_date": {
+                    "type": "string",
+                    "example": "2026-12-20"
+                },
+                "tourist": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                },
+                "tourist_contact": {
+                    "description": "visible to the guide once accepted",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/dto.Contact"
+                        }
+                    ]
+                },
+                "unit_price": {
+                    "type": "integer",
+                    "example": 6000
+                }
+            }
+        },
+        "dto.BookingSpot": {
+            "type": "object",
+            "properties": {
+                "cover_image_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "location_name": {
+                    "type": "string",
+                    "example": "Mongla, Bagerhat"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "sundarbans"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Sundarbans"
                 }
             }
         },
@@ -2789,6 +6991,329 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.Contact": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "rahim.guide@example.com"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+8801711000001"
+                },
+                "whatsapp": {
+                    "type": "string",
+                    "example": "+8801711000001"
+                }
+            }
+        },
+        "dto.CreateBookingRequest": {
+            "type": "object",
+            "required": [
+                "gig_id",
+                "group_size",
+                "tour_date"
+            ],
+            "properties": {
+                "contact_phone": {
+                    "type": "string",
+                    "example": "+8801712345678"
+                },
+                "gig_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "group_size": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "example": 4
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Two kids in the group, we are vegetarian."
+                },
+                "start_time": {
+                    "type": "string",
+                    "example": "08:00"
+                },
+                "tour_date": {
+                    "type": "string",
+                    "example": "2026-12-20"
+                }
+            }
+        },
+        "dto.CreateGigRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "duration_hours",
+                "languages",
+                "max_group_size",
+                "price",
+                "pricing_type",
+                "spot_id",
+                "title"
+            ],
+            "properties": {
+                "available_days": {
+                    "type": "array",
+                    "maxItems": 7,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "fri",
+                        "sat"
+                    ]
+                },
+                "cancellation_policy": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Free cancellation up to 48 hours before the tour."
+                },
+                "cover_image_url": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": ""
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 10000,
+                    "minLength": 50,
+                    "example": "We start at Mongla port at 7am and cruise through the tidal creeks..."
+                },
+                "duration_hours": {
+                    "type": "number",
+                    "maximum": 720,
+                    "example": 8
+                },
+                "excludes": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Hotel",
+                        "Transport to Mongla"
+                    ]
+                },
+                "includes": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Boat ride",
+                        "Lunch",
+                        "Forest permit"
+                    ]
+                },
+                "languages": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bn",
+                        "en"
+                    ]
+                },
+                "max_group_size": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "example": 10
+                },
+                "meeting_point": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "Mongla ferry ghat"
+                },
+                "price": {
+                    "type": "integer",
+                    "maximum": 1000000,
+                    "minimum": 100,
+                    "example": 6000
+                },
+                "pricing_type": {
+                    "type": "string",
+                    "enum": [
+                        "per_person",
+                        "per_group"
+                    ],
+                    "example": "per_group"
+                },
+                "spot_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "paused"
+                    ],
+                    "example": "active"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 10,
+                    "example": "Full-day Sundarbans boat safari with a licensed guide"
+                }
+            }
+        },
+        "dto.CreateSpotRequest": {
+            "type": "object",
+            "required": [
+                "category",
+                "description",
+                "location_name",
+                "title",
+                "upazila_ids"
+            ],
+            "properties": {
+                "best_time_to_visit": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "example": "December – February"
+                },
+                "bn_title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "example": "সেন্টমার্টিন দ্বীপ"
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "beach",
+                        "island",
+                        "hill",
+                        "forest",
+                        "waterfall",
+                        "lake",
+                        "river",
+                        "wetland",
+                        "heritage",
+                        "religious",
+                        "park",
+                        "city",
+                        "other"
+                    ],
+                    "example": "island"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 20000,
+                    "minLength": 20,
+                    "example": "Saint Martin's Island is a small coral island..."
+                },
+                "google_map_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://www.google.com/maps/search/?api=1\u0026query=20.6237,92.3233"
+                },
+                "highlights": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Coral reefs",
+                        "Chhera Dwip"
+                    ]
+                },
+                "images": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                        "$ref": "#/definitions/dto.ImageInput"
+                    }
+                },
+                "is_featured": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 27,
+                    "minimum": 20,
+                    "example": 20.62375
+                },
+                "location_name": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 2,
+                    "example": "Teknaf, Cox's Bazar"
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 93,
+                    "minimum": 88,
+                    "example": 92.3233
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "example": "saint-martins-island"
+                },
+                "source_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://en.wikipedia.org/wiki/St._Martin%27s_Island"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "published",
+                        "archived"
+                    ],
+                    "example": "published"
+                },
+                "subtitle": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "Bangladesh's only coral island"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 2,
+                    "example": "Saint Martin's Island"
+                },
+                "upazila_ids": {
+                    "type": "array",
+                    "maxItems": 5,
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        75
+                    ]
+                },
+                "videos": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "$ref": "#/definitions/dto.VideoInput"
+                    }
+                }
+            }
+        },
         "dto.DeleteAccountRequest": {
             "type": "object",
             "required": [
@@ -2803,6 +7328,298 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 72,
                     "example": "Travel2026!"
+                }
+            }
+        },
+        "dto.DistrictPatch": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "example": "কক্সবাজার"
+                },
+                "division_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 90,
+                    "minimum": -90,
+                    "example": 21.44315
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 180,
+                    "minimum": -180,
+                    "example": 91.97977
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 2,
+                    "example": "Cox's Bazar"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "example": "coxs-bazar"
+                },
+                "website": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "www.coxsbazar.gov.bd"
+                }
+            }
+        },
+        "dto.DistrictRef": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "কক্সবাজার"
+                },
+                "division_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Cox's Bazar"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "coxs-bazar"
+                }
+            }
+        },
+        "dto.DistrictRequest": {
+            "type": "object",
+            "required": [
+                "bn_name",
+                "division_id",
+                "name"
+            ],
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "example": "কক্সবাজার"
+                },
+                "division_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 90,
+                    "minimum": -90,
+                    "example": 21.44315
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 180,
+                    "minimum": -180,
+                    "example": 91.97977
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 2,
+                    "example": "Cox's Bazar"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "example": "coxs-bazar"
+                },
+                "website": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "www.coxsbazar.gov.bd"
+                }
+            }
+        },
+        "dto.DistrictResponse": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "কক্সবাজার"
+                },
+                "division": {
+                    "$ref": "#/definitions/dto.DivisionRef"
+                },
+                "division_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": 21.44315
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 91.97977
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Cox's Bazar"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "coxs-bazar"
+                },
+                "spot_count": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "upazila_count": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "website": {
+                    "type": "string",
+                    "example": "www.coxsbazar.gov.bd"
+                }
+            }
+        },
+        "dto.DivisionPatch": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "example": "চট্টগ্রাম"
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 90,
+                    "minimum": -90,
+                    "example": 22.701308
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 180,
+                    "minimum": -180,
+                    "example": 91.705861
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 2,
+                    "example": "Chattogram"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "example": "chattogram"
+                }
+            }
+        },
+        "dto.DivisionRef": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "চট্টগ্রাম"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Chattogram"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "chattogram"
+                }
+            }
+        },
+        "dto.DivisionRequest": {
+            "type": "object",
+            "required": [
+                "bn_name",
+                "name"
+            ],
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 1,
+                    "example": "চট্টগ্রাম"
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 90,
+                    "minimum": -90,
+                    "example": 22.701308
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 180,
+                    "minimum": -180,
+                    "example": 91.705861
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "minLength": 2,
+                    "example": "Chattogram"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "example": "chattogram"
+                }
+            }
+        },
+        "dto.DivisionResponse": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "চট্টগ্রাম"
+                },
+                "district_count": {
+                    "type": "integer",
+                    "example": 11
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": 22.701308
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 91.705861
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Chattogram"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "chattogram"
                 }
             }
         },
@@ -2836,6 +7653,164 @@ const docTemplate = `{
                     "maxLength": 10,
                     "minLength": 4,
                     "example": "482913"
+                }
+            }
+        },
+        "dto.GeoRef": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "চট্টগ্রাম"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Chattogram"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "chattogram"
+                }
+            }
+        },
+        "dto.GigPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.GigResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.GigResponse": {
+            "type": "object",
+            "properties": {
+                "available_days": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "fri",
+                        "sat"
+                    ]
+                },
+                "booking_count": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "cancellation_policy": {
+                    "type": "string"
+                },
+                "completed_count": {
+                    "type": "integer",
+                    "example": 15
+                },
+                "cover_image_url": {
+                    "description": "gig cover, falls back to the spot cover",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "duration_hours": {
+                    "type": "number",
+                    "example": 8
+                },
+                "excludes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "guide": {
+                    "$ref": "#/definitions/dto.GuideRef"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "includes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bn",
+                        "en"
+                    ]
+                },
+                "max_group_size": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "meeting_point": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer",
+                    "example": 6000
+                },
+                "pricing_type": {
+                    "type": "string",
+                    "enum": [
+                        "per_person",
+                        "per_group"
+                    ],
+                    "example": "per_group"
+                },
+                "rating_avg": {
+                    "type": "number",
+                    "example": 4.8
+                },
+                "rating_count": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "spot": {
+                    "$ref": "#/definitions/dto.SpotRef"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "paused",
+                        "suspended"
+                    ],
+                    "example": "active"
+                },
+                "suspended_reason": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Full-day Sundarbans boat safari"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -2982,6 +7957,56 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GuideRef": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "experience_years": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Rahim Uddin"
+                },
+                "headline": {
+                    "type": "string",
+                    "example": "Licensed Sundarbans mangrove \u0026 wildlife guide"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bn",
+                        "en"
+                    ]
+                },
+                "rating_avg": {
+                    "type": "number",
+                    "example": 4.9
+                },
+                "rating_count": {
+                    "type": "integer",
+                    "example": 128
+                },
+                "total_tours": {
+                    "type": "integer",
+                    "example": 310
+                },
+                "verified": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "dto.IdentifierOTPRequest": {
             "type": "object",
             "required": [
@@ -3017,6 +8042,60 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ImageInput": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "Sunset at Laboni Point"
+                },
+                "id": {
+                    "description": "ID keeps an existing image (and its uploaded file) when replacing the list. Omit for new URLs.",
+                    "type": "string",
+                    "example": ""
+                },
+                "source_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://commons.wikimedia.org/wiki/File:Cox%27s_Bazaar_Sunset_Sep2019.jpg"
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/cf/Cox%27s_Bazaar_Sunset_Sep2019.jpg/1280px-Cox%27s_Bazaar_Sunset_Sep2019.jpg"
+                }
+            }
+        },
+        "dto.ImageResponse": {
+            "type": "object",
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Boats at the jetty"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "source_url": {
+                    "type": "string",
+                    "example": "https://commons.wikimedia.org/wiki/File:Saint_Martins_Island.jpg"
+                },
+                "uploaded": {
+                    "description": "true = stored in our Cloudinary",
+                    "type": "boolean",
+                    "example": false
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://thumb.wikimedia.org/.../1280px-Saint_Martins_Island.jpg"
+                }
+            }
+        },
         "dto.LoginRequest": {
             "type": "object",
             "required": [
@@ -3035,6 +8114,70 @@ const docTemplate = `{
                     "maxLength": 72,
                     "minLength": 1,
                     "example": "Travel2026!"
+                }
+            }
+        },
+        "dto.MapMarker": {
+            "type": "object",
+            "properties": {
+                "bn_title": {
+                    "type": "string",
+                    "example": "সাজেক ভ্যালি"
+                },
+                "category": {
+                    "type": "string",
+                    "example": "hill"
+                },
+                "cover_image_url": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "district_name": {
+                    "type": "string",
+                    "example": "Rangamati"
+                },
+                "district_slug": {
+                    "type": "string",
+                    "example": "rangamati"
+                },
+                "division_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "gig_count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": 23.635
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 92.49
+                },
+                "rating_avg": {
+                    "type": "number",
+                    "example": 4.7
+                },
+                "rating_count": {
+                    "type": "integer",
+                    "example": 18
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "sajek-valley"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Sajek Valley"
                 }
             }
         },
@@ -3109,6 +8252,20 @@ const docTemplate = `{
                         "deleted"
                     ],
                     "example": "active"
+                }
+            }
+        },
+        "dto.MyGigsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.GigResponse"
+                    }
+                },
+                "quota": {
+                    "$ref": "#/definitions/dto.QuotaResponse"
                 }
             }
         },
@@ -3198,6 +8355,41 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.OptionsResponse": {
+            "type": "object",
+            "properties": {
+                "categories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "beach",
+                        "island",
+                        "hill"
+                    ]
+                },
+                "max_images": {
+                    "type": "integer",
+                    "example": 50
+                },
+                "max_videos": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "statuses": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "draft",
+                        "published",
+                        "archived"
+                    ]
+                }
+            }
+        },
         "dto.PageMeta": {
             "type": "object",
             "properties": {
@@ -3216,6 +8408,254 @@ const docTemplate = `{
                 "total_pages": {
                     "type": "integer",
                     "example": 3
+                }
+            }
+        },
+        "dto.PaymentMethodPatch": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2
+                },
+                "account_number": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 5
+                },
+                "account_type": {
+                    "type": "string",
+                    "enum": [
+                        "personal",
+                        "agent",
+                        "merchant",
+                        "bank"
+                    ]
+                },
+                "instructions": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "position": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 0
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "bkash",
+                        "nagad",
+                        "rocket",
+                        "upay",
+                        "bank"
+                    ]
+                }
+            }
+        },
+        "dto.PaymentMethodRequest": {
+            "type": "object",
+            "required": [
+                "account_name",
+                "account_number",
+                "account_type",
+                "provider"
+            ],
+            "properties": {
+                "account_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "CholoBangladesh"
+                },
+                "account_number": {
+                    "type": "string",
+                    "maxLength": 40,
+                    "minLength": 5,
+                    "example": "01700000000"
+                },
+                "account_type": {
+                    "type": "string",
+                    "enum": [
+                        "personal",
+                        "agent",
+                        "merchant",
+                        "bank"
+                    ],
+                    "example": "personal"
+                },
+                "instructions": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Use Send Money and put your booking code in the reference."
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "position": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 0,
+                    "example": 0
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "bkash",
+                        "nagad",
+                        "rocket",
+                        "upay",
+                        "bank"
+                    ],
+                    "example": "bkash"
+                }
+            }
+        },
+        "dto.PaymentMethodResponse": {
+            "type": "object",
+            "properties": {
+                "account_name": {
+                    "type": "string",
+                    "example": "CholoBangladesh"
+                },
+                "account_number": {
+                    "type": "string",
+                    "example": "01700000000"
+                },
+                "account_type": {
+                    "type": "string",
+                    "example": "personal"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "instructions": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "position": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "bkash",
+                        "nagad",
+                        "rocket",
+                        "upay",
+                        "bank"
+                    ],
+                    "example": "bkash"
+                }
+            }
+        },
+        "dto.PaymentPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PaymentResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.PaymentResponse": {
+            "type": "object",
+            "properties": {
+                "admin_note": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "integer",
+                    "example": 6000
+                },
+                "booking_code": {
+                    "type": "string",
+                    "example": "CB7K3D9QXA"
+                },
+                "booking_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "gig_title": {
+                    "type": "string"
+                },
+                "guide": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "method": {
+                    "$ref": "#/definitions/dto.PaymentMethodResponse"
+                },
+                "payer": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                },
+                "provider": {
+                    "type": "string",
+                    "example": "bkash"
+                },
+                "purpose": {
+                    "type": "string",
+                    "example": "booking"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "sender_number": {
+                    "type": "string",
+                    "example": "+8801812345678"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "verified",
+                        "rejected"
+                    ],
+                    "example": "pending"
+                },
+                "transaction_id": {
+                    "type": "string",
+                    "example": "8N7A6B5C4D"
+                }
+            }
+        },
+        "dto.PersonRef": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Rahim Uddin"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
                 }
             }
         },
@@ -3395,6 +8835,50 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.QuotaResponse": {
+            "type": "object",
+            "properties": {
+                "can_create": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "extra_slots": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "free_limit": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "remaining": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "total_limit": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "upgrade_required": {
+                    "description": "show \"buy more slots\" (payment comes later)",
+                    "type": "boolean",
+                    "example": true
+                },
+                "used": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "dto.ReasonRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Fully booked on that date"
+                }
+            }
+        },
         "dto.RefreshRequest": {
             "type": "object",
             "required": [
@@ -3423,6 +8907,20 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ReplyRequest": {
+            "type": "object",
+            "required": [
+                "reply"
+            ],
+            "properties": {
+                "reply": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "minLength": 2,
+                    "example": "Thank you! It was a pleasure guiding your family."
+                }
+            }
+        },
         "dto.ResetPasswordRequest": {
             "type": "object",
             "required": [
@@ -3439,6 +8937,103 @@ const docTemplate = `{
                     "maxLength": 200,
                     "minLength": 20,
                     "example": "Yb7...reset-token"
+                }
+            }
+        },
+        "dto.ReviewList": {
+            "type": "object",
+            "properties": {
+                "reviews": {
+                    "$ref": "#/definitions/dto.ReviewPage"
+                },
+                "summary": {
+                    "$ref": "#/definitions/dto.Summary"
+                }
+            }
+        },
+        "dto.ReviewPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ReviewResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.ReviewPaymentRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Matched in bKash statement"
+                }
+            }
+        },
+        "dto.ReviewResponse": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "$ref": "#/definitions/dto.Author"
+                },
+                "booking_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "comment": {
+                    "type": "string",
+                    "example": "Rahim was amazing — we saw a crocodile and spotted deer!"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "gig_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "gig_title": {
+                    "type": "string",
+                    "example": "Full-day Sundarbans boat safari"
+                },
+                "guide_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "guide_reply": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "https://res.cloudinary.com/demo/image/upload/v1/cholobangladesh/reviews/x.jpg"
+                    ]
+                },
+                "is_visible": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "rating": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "replied_at": {
+                    "type": "string"
+                },
+                "spot_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
                 }
             }
         },
@@ -3469,6 +9064,670 @@ const docTemplate = `{
                 "user_agent": {
                     "type": "string",
                     "example": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"
+                }
+            }
+        },
+        "dto.SetQuotaRequest": {
+            "type": "object",
+            "properties": {
+                "extra_slots": {
+                    "type": "integer",
+                    "maximum": 500,
+                    "minimum": 0,
+                    "example": 3
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Paid 1500 BDT via bKash TX 8N7A6B5C"
+                }
+            }
+        },
+        "dto.SpotCard": {
+            "type": "object",
+            "properties": {
+                "bn_title": {
+                    "type": "string",
+                    "example": "সেন্টমার্টিন দ্বীপ"
+                },
+                "category": {
+                    "type": "string",
+                    "example": "island"
+                },
+                "cover_image_url": {
+                    "type": "string"
+                },
+                "district": {
+                    "$ref": "#/definitions/dto.GeoRef"
+                },
+                "division": {
+                    "$ref": "#/definitions/dto.GeoRef"
+                },
+                "gig_count": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "is_featured": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": 20.62375
+                },
+                "location_name": {
+                    "type": "string",
+                    "example": "Teknaf, Cox's Bazar"
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 92.3233
+                },
+                "rating_avg": {
+                    "type": "number",
+                    "example": 4.8
+                },
+                "rating_count": {
+                    "type": "integer",
+                    "example": 32
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "saint-martins-island"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "published"
+                },
+                "subtitle": {
+                    "type": "string",
+                    "example": "Bangladesh's only coral island"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Saint Martin's Island"
+                }
+            }
+        },
+        "dto.SpotDetail": {
+            "type": "object",
+            "properties": {
+                "best_time_to_visit": {
+                    "type": "string",
+                    "example": "December – February"
+                },
+                "bn_title": {
+                    "type": "string",
+                    "example": "সেন্টমার্টিন দ্বীপ"
+                },
+                "category": {
+                    "type": "string",
+                    "example": "island"
+                },
+                "cover_image_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "district": {
+                    "$ref": "#/definitions/dto.GeoRef"
+                },
+                "division": {
+                    "$ref": "#/definitions/dto.GeoRef"
+                },
+                "gig_count": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "google_map_url": {
+                    "type": "string"
+                },
+                "highlights": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "images": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ImageResponse"
+                    }
+                },
+                "is_featured": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": 20.62375
+                },
+                "location_name": {
+                    "type": "string",
+                    "example": "Teknaf, Cox's Bazar"
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 92.3233
+                },
+                "rating_avg": {
+                    "type": "number",
+                    "example": 4.8
+                },
+                "rating_count": {
+                    "type": "integer",
+                    "example": 32
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "saint-martins-island"
+                },
+                "source_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "published"
+                },
+                "subtitle": {
+                    "type": "string",
+                    "example": "Bangladesh's only coral island"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Saint Martin's Island"
+                },
+                "upazilas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.UpazilaRef"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "videos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.VideoResponse"
+                    }
+                }
+            }
+        },
+        "dto.SpotPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.SpotCard"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.SpotRef": {
+            "type": "object",
+            "properties": {
+                "bn_title": {
+                    "type": "string",
+                    "example": "সুন্দরবন"
+                },
+                "cover_image_url": {
+                    "type": "string"
+                },
+                "district_id": {
+                    "type": "integer",
+                    "example": 28
+                },
+                "district_name": {
+                    "type": "string",
+                    "example": "Bagerhat"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "location_name": {
+                    "type": "string",
+                    "example": "Mongla (Bagerhat) \u0026 Shyamnagar (Satkhira)"
+                },
+                "published": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "sundarbans"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Sundarbans"
+                }
+            }
+        },
+        "dto.SubmitPaymentRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "method_id",
+                "sender_number",
+                "transaction_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 6000
+                },
+                "method_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "sender_number": {
+                    "type": "string",
+                    "example": "01812345678"
+                },
+                "transaction_id": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 6,
+                    "example": "8N7A6B5C4D"
+                }
+            }
+        },
+        "dto.Summary": {
+            "type": "object",
+            "properties": {
+                "average": {
+                    "type": "number",
+                    "example": 4.75
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "stars": {
+                    "description": "\"1\"..\"5\" -\u003e count",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                }
+            }
+        },
+        "dto.TreeDistrict": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "কক্সবাজার"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Cox's Bazar"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "coxs-bazar"
+                },
+                "upazilas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TreeUpazila"
+                    }
+                }
+            }
+        },
+        "dto.TreeDivision": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "চট্টগ্রাম"
+                },
+                "districts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TreeDistrict"
+                    }
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Chattogram"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "chattogram"
+                }
+            }
+        },
+        "dto.TreeUpazila": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "টেকনাফ"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 75
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Teknaf"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "teknaf"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "upazila"
+                }
+            }
+        },
+        "dto.UpazilaPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.UpazilaResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.UpazilaPatch": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "টেকনাফ"
+                },
+                "district_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 9
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 90,
+                    "minimum": -90,
+                    "example": 20.8624
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 180,
+                    "minimum": -180,
+                    "example": 92.3058
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Teknaf"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "teknaf"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "upazila",
+                        "metro_thana"
+                    ],
+                    "example": "upazila"
+                }
+            }
+        },
+        "dto.UpazilaRef": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "টেকনাফ"
+                },
+                "district": {
+                    "$ref": "#/definitions/dto.GeoRef"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 75
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Teknaf"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "teknaf"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "upazila"
+                }
+            }
+        },
+        "dto.UpazilaRequest": {
+            "type": "object",
+            "required": [
+                "bn_name",
+                "district_id",
+                "name"
+            ],
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "টেকনাফ"
+                },
+                "district_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 9
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 90,
+                    "minimum": -90,
+                    "example": 20.8624
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 180,
+                    "minimum": -180,
+                    "example": 92.3058
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Teknaf"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "teknaf"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "upazila",
+                        "metro_thana"
+                    ],
+                    "example": "upazila"
+                }
+            }
+        },
+        "dto.UpazilaResponse": {
+            "type": "object",
+            "properties": {
+                "bn_name": {
+                    "type": "string",
+                    "example": "টেকনাফ"
+                },
+                "district": {
+                    "$ref": "#/definitions/dto.DistrictRef"
+                },
+                "district_id": {
+                    "type": "integer",
+                    "example": 9
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 75
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": 20.8624
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 92.3058
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Teknaf"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "teknaf"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "upazila",
+                        "metro_thana"
+                    ],
+                    "example": "upazila"
+                }
+            }
+        },
+        "dto.UpdateGigRequest": {
+            "type": "object",
+            "properties": {
+                "available_days": {
+                    "type": "array",
+                    "maxItems": 7,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "cancellation_policy": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "cover_image_url": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 10000,
+                    "minLength": 50
+                },
+                "duration_hours": {
+                    "type": "number",
+                    "maximum": 720,
+                    "example": 6
+                },
+                "excludes": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "includes": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "languages": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bn",
+                        "en"
+                    ]
+                },
+                "max_group_size": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "example": 8
+                },
+                "meeting_point": {
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "price": {
+                    "type": "integer",
+                    "maximum": 1000000,
+                    "minimum": 100,
+                    "example": 6500
+                },
+                "pricing_type": {
+                    "type": "string",
+                    "enum": [
+                        "per_person",
+                        "per_group"
+                    ],
+                    "example": "per_person"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "active",
+                        "paused"
+                    ],
+                    "example": "paused"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 10
                 }
             }
         },
@@ -3516,6 +9775,155 @@ const docTemplate = `{
                 "whatsapp_number": {
                     "type": "string",
                     "example": "+447911123456"
+                }
+            }
+        },
+        "dto.UpdateSpotRequest": {
+            "type": "object",
+            "properties": {
+                "best_time_to_visit": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "example": "December – February"
+                },
+                "bn_title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "example": "সেন্টমার্টিন দ্বীপ"
+                },
+                "category": {
+                    "type": "string",
+                    "enum": [
+                        "beach",
+                        "island",
+                        "hill",
+                        "forest",
+                        "waterfall",
+                        "lake",
+                        "river",
+                        "wetland",
+                        "heritage",
+                        "religious",
+                        "park",
+                        "city",
+                        "other"
+                    ],
+                    "example": "island"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 20000,
+                    "minLength": 20,
+                    "example": "Saint Martin's Island is a small coral island..."
+                },
+                "google_map_url": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "https://www.google.com/maps/search/?api=1\u0026query=20.6237,92.3233"
+                },
+                "highlights": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Coral reefs",
+                        "Chhera Dwip"
+                    ]
+                },
+                "images": {
+                    "type": "array",
+                    "maxItems": 50,
+                    "items": {
+                        "$ref": "#/definitions/dto.ImageInput"
+                    }
+                },
+                "is_featured": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "latitude": {
+                    "type": "number",
+                    "maximum": 27,
+                    "minimum": 20,
+                    "example": 20.62375
+                },
+                "location_name": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 2,
+                    "example": "Teknaf, Cox's Bazar"
+                },
+                "longitude": {
+                    "type": "number",
+                    "maximum": 93,
+                    "minimum": 88,
+                    "example": 92.3233
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "example": "saint-martins-island"
+                },
+                "source_url": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "draft",
+                        "published",
+                        "archived"
+                    ],
+                    "example": "published"
+                },
+                "subtitle": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "Bangladesh's only coral island"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 2,
+                    "example": "Saint Martin's Island"
+                },
+                "upazila_ids": {
+                    "type": "array",
+                    "maxItems": 5,
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        75
+                    ]
+                },
+                "videos": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "items": {
+                        "$ref": "#/definitions/dto.VideoInput"
+                    }
+                }
+            }
+        },
+        "dto.UpdateUserRoleRequest": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "user",
+                        "moderator"
+                    ],
+                    "example": "moderator"
                 }
             }
         },
@@ -3678,6 +10086,65 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.VideoInput": {
+            "type": "object",
+            "required": [
+                "url"
+            ],
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "Cox's Bazar travel guide"
+                },
+                "url": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "https://www.youtube.com/watch?v=y9vAaKi7SvU"
+                }
+            }
+        },
+        "dto.VideoResponse": {
+            "type": "object",
+            "properties": {
+                "embed_url": {
+                    "type": "string",
+                    "example": "https://www.youtube.com/embed/y9vAaKi7SvU"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "thumbnail_url": {
+                    "type": "string",
+                    "example": "https://i.ytimg.com/vi/y9vAaKi7SvU/hqdefault.jpg"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Saint Martin tour guide"
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://www.youtube.com/watch?v=y9vAaKi7SvU"
+                },
+                "youtube_id": {
+                    "type": "string",
+                    "example": "y9vAaKi7SvU"
+                }
+            }
+        },
+        "dto.VisibilityRequest": {
+            "type": "object",
+            "required": [
+                "is_visible"
+            ],
+            "properties": {
+                "is_visible": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
         "http.APIVersion": {
             "type": "object",
             "properties": {
@@ -3758,6 +10225,41 @@ const docTemplate = `{
                 }
             }
         },
+        "meta.Country": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "BD"
+                },
+                "dial_code": {
+                    "type": "string",
+                    "example": "+880"
+                },
+                "emoji": {
+                    "type": "string",
+                    "example": "🇧🇩"
+                },
+                "flag_png": {
+                    "description": "40px wide, ideal for dropdowns",
+                    "type": "string",
+                    "example": "https://flagcdn.com/w40/bd.png"
+                },
+                "flag_png_2x": {
+                    "description": "for srcset on retina screens",
+                    "type": "string",
+                    "example": "https://flagcdn.com/w80/bd.png"
+                },
+                "flag_svg": {
+                    "type": "string",
+                    "example": "https://flagcdn.com/bd.svg"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Bangladesh"
+                }
+            }
+        },
         "response.Body": {
             "type": "object",
             "properties": {
@@ -3810,6 +10312,27 @@ const docTemplate = `{
                 "success": {
                     "type": "boolean",
                     "example": false
+                }
+            }
+        },
+        "response.PageMeta": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 57
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         }

@@ -189,3 +189,29 @@ func (s *Service) EnsureAdmin(ctx context.Context, cfg config.AdminConfig) error
 	slog.Info("bootstrap admin created", "email", email)
 	return nil
 }
+
+// AdminSetUserRole switches an account between tourist (user) and moderator.
+// The role lives in the access token, so every session is signed out and the
+// user logs in again with the new role.
+func (s *Service) AdminSetUserRole(ctx context.Context, adminID, targetID uuid.UUID, req dto.UpdateUserRoleRequest, meta domain.RequestMeta) (*dto.MeResponse, error) {
+	u, err := s.Repo.FindUserByID(ctx, targetID)
+	if err != nil {
+		return nil, notFound(err, domain.ErrUserNotFound)
+	}
+	if u.Role == domain.RoleAdmin || u.Role == domain.RoleGuide {
+		return nil, domain.ErrRoleNotChangeable
+	}
+	role := domain.Role(req.Role)
+	if u.Role == role {
+		return s.GetMe(ctx, targetID)
+	}
+	if err := s.Repo.UpdateUser(ctx, targetID, map[string]any{"role": role}); err != nil {
+		return nil, err
+	}
+	if err := s.revokeEverything(ctx, targetID); err != nil {
+		return nil, err
+	}
+	s.invalidateAuthState(ctx, targetID)
+	s.audit(ctx, &targetID, &adminID, domain.EventRoleChanged, meta, map[string]any{"from": u.Role, "to": role})
+	return s.GetMe(ctx, targetID)
+}

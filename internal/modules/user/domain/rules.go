@@ -81,7 +81,7 @@ func Age(dob, now time.Time) int {
 
 // NextOnboardingStep computes what the frontend should show next.
 func NextOnboardingStep(u *User, missing []string) string {
-	if u.Role == RoleAdmin {
+	if u.Role == RoleAdmin || u.Role == RoleModerator {
 		return "done"
 	}
 	if len(missing) > 0 {

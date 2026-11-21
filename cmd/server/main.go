@@ -29,7 +29,27 @@
 //	@tag.name					7. Guides · Public
 //	@tag.description			Tourist-facing guide discovery (verified guides only).
 //	@tag.name					8. Admin
-//	@tag.description			User moderation and guide KYC review (role = admin).
+//	@tag.description			User moderation, roles (moderator) and guide KYC review (role = admin).
+//	@tag.name					9. Geo · Public
+//	@tag.description			Bangladesh divisions (8), districts (64) and upazilas/thanas for dropdowns and the map.
+//	@tag.name					10. Tourist spots · Public
+//	@tag.description			Browse published tourist spots, details page and the Bangladesh map markers.
+//	@tag.name					11. Manage · Geo
+//	@tag.description			Admin + moderator: create/edit divisions, districts, upazilas.
+//	@tag.name					12. Manage · Tourist spots
+//	@tag.description			Admin + moderator: tourist spot CRUD, photo upload, autofill from name (Wikipedia/Google/YouTube/AI).
+//	@tag.name					13. Guide · My gigs
+//	@tag.description			Verified guides: create tour gigs per tourist spot (FREE_GIG_LIMIT free, default 5).
+//	@tag.name					14. Gigs · Public
+//	@tag.description			Tourist-facing gig browsing (per spot, per guide, price, language).
+//	@tag.name					15. Bookings
+//	@tag.description			Tourist books a gig → guide accepts → tour → guide completes → pay → review.
+//	@tag.name					16. Payments
+//	@tag.description			Default payment: bKash/Nagad/Rocket number + transaction ID, verified by an admin.
+//	@tag.name					17. Reviews
+//	@tag.description			Star ratings, comments and photos after a completed tour; guide replies.
+//	@tag.name					18. Admin · Marketplace
+//	@tag.description			Admin: gigs, gig quotas, bookings, payment verification, payment numbers, review moderation.
 package main
 
 import (
@@ -47,6 +67,12 @@ import (
 	_ "cholobangladesh-server/docs" // generated swagger spec (swag init)
 	"cholobangladesh-server/internal/config"
 	apphttp "cholobangladesh-server/internal/http"
+	"cholobangladesh-server/internal/modules/booking"
+	"cholobangladesh-server/internal/modules/geo"
+	"cholobangladesh-server/internal/modules/gig"
+	"cholobangladesh-server/internal/modules/meta"
+	"cholobangladesh-server/internal/modules/review"
+	"cholobangladesh-server/internal/modules/spot"
 	"cholobangladesh-server/internal/modules/user"
 	"cholobangladesh-server/internal/platform/cache"
 	"cholobangladesh-server/internal/platform/captcha"
@@ -132,8 +158,20 @@ func run() error {
 	if err := userModule.Start(ctx); err != nil {
 		return err
 	}
+	// Feature modules authenticate through the user module's session validator.
+	deps.Sessions = userModule.Service
 
-	handler, err := apphttp.NewRouter(deps, userModule)
+	geoModule := geo.New(deps)
+	if err := geoModule.Start(ctx); err != nil {
+		return fmt.Errorf("geo: %w", err)
+	}
+	metaModule, err := meta.New()
+	if err != nil {
+		return err
+	}
+
+	handler, err := apphttp.NewRouter(deps, userModule, metaModule, geoModule, spot.New(deps),
+		gig.New(deps), booking.New(deps), review.New(deps))
 	if err != nil {
 		return err
 	}

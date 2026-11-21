@@ -183,3 +183,36 @@ func (h *Handler) AdminRejectVerification(c *gin.Context) {
 	}
 	response.OK(c, http.StatusOK, "verification rejected", nil)
 }
+
+// AdminSetUserRole godoc
+//
+//	@Summary		Make a user a moderator (or back to tourist)
+//	@Description	Moderators can manage divisions, districts, upazilas and tourist spots (/manage/*).
+//	@Description	Only `user` ⇄ `moderator` is allowed; guide and admin accounts cannot change role.
+//	@Description	The user is signed out everywhere and must log in again to get the new role.
+//	@Tags			8. Admin
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			id		path		string						true	"User ID"	format(uuid)
+//	@Param			body	body		dto.UpdateUserRoleRequest	true	"New role"
+//	@Success		200		{object}	response.Body{data=dto.MeResponse}
+//	@Failure		404		{object}	response.ErrorResponse	"USER_NOT_FOUND"
+//	@Failure		409		{object}	response.ErrorResponse	"ROLE_NOT_CHANGEABLE"
+//	@Router			/admin/users/{id}/role [patch]
+func (h *Handler) AdminSetUserRole(c *gin.Context) {
+	id, ok := uuidParam(c, "id")
+	if !ok {
+		return
+	}
+	var req dto.UpdateUserRoleRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	res, err := h.svc.AdminSetUserRole(c.Request.Context(), uid(c), id, req, meta(c))
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, http.StatusOK, "role updated, the user must log in again", res)
+}

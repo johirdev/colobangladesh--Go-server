@@ -19,6 +19,8 @@ const (
 	RoleUser  Role = "user"  // tourist / traveller
 	RoleGuide Role = "guide" // local guide (BD phone verified + KYC)
 	RoleAdmin Role = "admin"
+	// RoleModerator manages content (geo data, tourist spots) via /manage/*.
+	RoleModerator Role = "moderator"
 )
 
 type Status string
@@ -179,6 +181,7 @@ const (
 	EventContactVerified = "user.contact_verified"
 	EventAccountDeleted  = "user.deleted"
 	EventStatusChanged   = "admin.user_status_changed"
+	EventRoleChanged     = "admin.user_role_changed"
 	EventKYCSubmitted    = "guide.kyc_submitted"
 	EventKYCApproved     = "guide.kyc_approved"
 	EventKYCRejected     = "guide.kyc_rejected"
