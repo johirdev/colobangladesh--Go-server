@@ -1,0 +1,3822 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "Backend API for **CholoBangladesh**, a tourist platform where travellers find and book verified local guides.\n\n## Roles\n| Role | Who | How they sign up |\n|---|---|---|\n| `user` | Tourist (foreign or local) | **Email OTP** (3 steps), or **Google / Apple** (1 step). No phone needed and no SMS cost. |\n| `guide` | Local guide | **Bangladeshi mobile OTP** (3 steps), then profile + **NID/selfie KYC**, which an admin approves |\n| `admin` | Platform staff | Created from the `ADMIN_EMAIL` / `ADMIN_PASSWORD` env vars |\n\n## Response envelope (every endpoint)\n```json\n// success\n{ \"success\": true,  \"message\": \"logged in\", \"data\": { ... }, \"request_id\": \"...\" }\n// error\n{ \"success\": false, \"message\": \"human readable\", \"error\": { \"code\": \"OTP_INVALID\", \"details\": { \"remaining_attempts\": 3 }, \"retry_after_seconds\": 60 }, \"request_id\": \"...\" }\n```\n* Base your UI logic on **`error.code`**, because it never changes. Show `message` to users.\n* `VALIDATION_ERROR` (422) → `error.details` is `[{ \"field\": \"password\", \"rule\": \"strong_password\", \"message\": \"...\" }]`. Show each message next to its form field.\n* On **429**, read `retry_after_seconds` (also the `Retry-After` header) and show a countdown.\n* Send `request_id` with bug reports.\n\n## Tourist sign-up flow\n1. `POST /auth/register/user/send-otp` `{email}` → show the OTP screen with a resend timer (`resend_after_seconds`)\n2. `POST /auth/register/user/verify-otp` `{email, otp}` → keep `data.token` in memory\n3. `POST /auth/register/user/complete` `{registration_token, full_name, password?, country_code?}` → **logged in**\n4. If `user.onboarding.next_step == \"complete_profile\"` → `PATCH /users/me/profile` (`country_code` is required)\n\n**Google / Apple:** `POST /auth/oauth/google` or `/auth/oauth/apple` with `{id_token}` → **logged in** (`is_new_user` tells you whether to show the welcome or onboarding screens).\n\n## Guide sign-up flow\n1. `POST /auth/register/guide/send-otp` `{phone: \"01712345678\"}`\n2. `POST /auth/register/guide/verify-otp` `{phone, otp}` → `data.token`\n3. `POST /auth/register/guide/complete` `{registration_token, full_name, password}` → **logged in**\n4. `PATCH /users/me/profile` (`date_of_birth`, `city`, ...) and `PUT /users/me/avatar`\n5. `PUT /guides/me/profile` (headline, about, languages, service areas, rate)\n6. `POST /guides/me/verification` (multipart: `nid_number`, `nid_front`, `nid_back`, `selfie`)\n7. Admin approves → `verification_status = approved` → the guide appears in `GET /guides`\n\nUse **`user.onboarding.next_step`** to route screens:\n`complete_profile` → `submit_verification` → `awaiting_review` → (`resubmit_verification`) → `done`.\n`onboarding.missing_fields` lists exactly which fields are missing.\n\n## Tokens\n* `access_token` is a JWT that expires in `expires_in_seconds` (default 15 min). Send it as `Authorization: Bearer \u003ctoken\u003e`.\n* `refresh_token` is opaque and lasts 30 days. **It rotates on every refresh**, so always save the new one.\n* Web clients should keep the refresh token in memory or secure storage, never in `localStorage` if you can avoid it. Mobile clients should use Keychain or Keystore.\n* 401 `TOKEN_INVALID` → call `POST /auth/token/refresh` once, then retry. 401 `REFRESH_TOKEN_INVALID` or `SESSION_REVOKED` → go to login.\n* 409 `REFRESH_TOKEN_ROTATED` → another tab already refreshed. Re-read the stored token and retry.\n\n## Security (what the frontend will notice)\n* **Rate limits** are enforced per IP (global, auth, OTP send) and per user (uploads). A request over the limit gets 429 `RATE_LIMITED`.\n* **OTP:** each code is valid for 5 minutes and can be used once. You can request a new code after 60 seconds, up to 5 per hour per email or phone. After 5 wrong attempts that email or phone is blocked for `USER_BLOCK_TIME`.\n* **Login lockout:** after `USER_MAX_FAILED_ATTEMPTS` wrong passwords, the account gets `ACCOUNT_TEMPORARILY_LOCKED` for `USER_BLOCK_TIME`.\n* **Captcha:** when enabled, send a Cloudflare Turnstile token in the `X-Captcha-Token` header on send-otp, login and forgot-password requests.\n* Forgot-password and OTP-login return the same response whether or not the account exists.\n",
+        "title": "CholoBangladesh API",
+        "contact": {
+            "name": "CholoBangladesh Backend"
+        },
+        "version": "1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/": {
+            "get": {
+                "description": "Current API version, build (version, git commit, build time) and all available versions.\nEvery response also carries an `X-API-Version` header. Deprecated versions add\n`Deprecation: true` and `Sunset: \u003cdate\u003e` headers. Use it to check the server is up.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "0. Meta"
+                ],
+                "summary": "API version info",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/http.VersionInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/guide-verifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Oldest first. Default: all statuses; use `status=pending` for the queue.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "Guide KYC review queue",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "approved",
+                            "rejected"
+                        ],
+                        "type": "string",
+                        "example": "pending",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AdminVerificationPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/guide-verifications/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Document URLs expire after 10 minutes. Every view is written to the audit log.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "KYC detail (decrypted NID + signed document URLs)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Verification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AdminVerificationDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "VERIFICATION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/guide-verifications/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "Approve a guide (profile goes live)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Verification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "409": {
+                        "description": "VERIFICATION_ALREADY_REVIEWED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/guide-verifications/{id}/reject": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The reason is shown to the guide, who can fix it and resubmit.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "Reject a guide verification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Verification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RejectVerificationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "409": {
+                        "description": "VERIFICATION_ALREADY_REVIEWED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "List users",
+                "parameters": [
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "example": "rahim",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "user",
+                            "guide",
+                            "admin"
+                        ],
+                        "type": "string",
+                        "example": "guide",
+                        "name": "role",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "active",
+                            "suspended",
+                            "deleted"
+                        ],
+                        "type": "string",
+                        "example": "active",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AdminUserPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "FORBIDDEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "Get a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "USER_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/status": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Suspending signs the user out of every device immediately.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "8. Admin"
+                ],
+                "summary": "Suspend / re-activate a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New status",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateUserStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "CANNOT_MODIFY_ADMIN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "`identifier` = email (tourists) or BD mobile (guides). Wrong password returns\n`INVALID_CREDENTIALS` with `details.remaining_attempts`. After USER_MAX_FAILED_ATTEMPTS\nfailures within USER_FAILED_ATTEMPT_WINDOW the account is locked for USER_BLOCK_TIME\n(`ACCOUNT_TEMPORARILY_LOCKED`, 429 + `retry_after_seconds`). Response time is identical\nwhether or not the account exists.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Login with email/phone + password",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cloudflare Turnstile token (when CAPTCHA_ENABLED)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "INVALID_CREDENTIALS",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "ACCOUNT_SUSPENDED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "ACCOUNT_TEMPORARILY_LOCKED | RATE_LIMITED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login/otp/send": {
+            "post": {
+                "description": "Sends a code to a verified email (tourist) or BD phone (guide). Always returns the same\nresponse whether or not the account exists (prevents account enumeration).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Passwordless login · Step 1 — send OTP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cloudflare Turnstile token (when CAPTCHA_ENABLED)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Email or BD phone",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.IdentifierRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OTPSentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "429": {
+                        "description": "OTP_COOLDOWN | OTP_LIMIT_REACHED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login/otp/verify": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Passwordless login · Step 2 — verify OTP and log in",
+                "parameters": [
+                    {
+                        "description": "Identifier + OTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.IdentifierOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "OTP_INVALID | OTP_EXPIRED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "ACCOUNT_SUSPENDED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "ACCOUNT_TEMPORARILY_LOCKED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revokes the current session; the access token stops working immediately.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Logout this device",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout-all": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Logout from all devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/oauth/apple": {
+            "post": {
+                "description": "Send the `id_token` (identityToken) from Sign in with Apple. Apple gives the user's name to the\nclient only on the first sign-in — forward it in `full_name`. Supports private relay emails.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Sign in with Apple (tourists)",
+                "parameters": [
+                    {
+                        "description": "Apple identity token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.OAuthRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "OAUTH_TOKEN_INVALID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "OAUTH_PROVIDER_DISABLED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/oauth/google": {
+            "post": {
+                "description": "Send the `id_token` (credential) from Google Identity Services (web) or Google Sign-In (mobile).\nCreates a tourist account on first use (`is_new_user: true`) or links to an existing account\nwith the same verified email. The token audience must be one of GOOGLE_CLIENT_IDS.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Sign in with Google (tourists)",
+                "parameters": [
+                    {
+                        "description": "Google ID token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.OAuthRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "OAUTH_TOKEN_INVALID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "OAUTH_EMAIL_UNVERIFIED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "OAUTH_PROVIDER_DISABLED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/password/forgot": {
+            "post": {
+                "description": "Sends a code to the verified email/phone. Same response whether or not the account exists.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "4. Auth · Password reset"
+                ],
+                "summary": "Forgot password · Step 1 — send reset OTP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cloudflare Turnstile token (when CAPTCHA_ENABLED)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Email or BD phone",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.IdentifierRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OTPSentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "429": {
+                        "description": "OTP_COOLDOWN | OTP_LIMIT_REACHED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/password/reset": {
+            "post": {
+                "description": "Sets the new password, signs out every device and clears any login lock. Then log in again.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "4. Auth · Password reset"
+                ],
+                "summary": "Forgot password · Step 3 — set new password",
+                "parameters": [
+                    {
+                        "description": "Reset token + new password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "400": {
+                        "description": "VERIFICATION_TOKEN_INVALID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/password/verify-otp": {
+            "post": {
+                "description": "`token` is valid for USER_PASSWORD_RESET_TOKEN_EXPIRE_IN and can be used once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "4. Auth · Password reset"
+                ],
+                "summary": "Forgot password · Step 2 — verify OTP, get reset_token",
+                "parameters": [
+                    {
+                        "description": "Identifier + OTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.IdentifierOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.VerificationTicketResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "OTP_INVALID | OTP_EXPIRED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "ACCOUNT_TEMPORARILY_LOCKED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/guide/complete": {
+            "post": {
+                "description": "Creates the guide account (verification_status = `unverified`) and logs in.\nNext steps (see `user.onboarding`): PATCH /users/me/profile + PUT /users/me/avatar →\nPUT /guides/me/profile → POST /guides/me/verification → admin approval → profile goes live.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "2. Auth · Guide sign-up"
+                ],
+                "summary": "Guide sign-up · Step 3 — create guide account",
+                "parameters": [
+                    {
+                        "description": "Account details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CompleteGuideRegistrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "VERIFICATION_TOKEN_INVALID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "PHONE_ALREADY_REGISTERED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/guide/send-otp": {
+            "post": {
+                "description": "Accepts `01XXXXXXXXX`, `8801XXXXXXXXX` or `+8801XXXXXXXXX`. Only BD mobile operators are\nallowed (prevents international SMS fraud). Also limited to SMS_MAX_PER_IP_PER_DAY per IP.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "2. Auth · Guide sign-up"
+                ],
+                "summary": "Guide sign-up · Step 1 — send SMS OTP (Bangladeshi numbers only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cloudflare Turnstile token (when CAPTCHA_ENABLED)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
+                    },
+                    {
+                        "description": "BD mobile number",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PhoneOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OTPSentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "PHONE_ALREADY_REGISTERED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "OTP_COOLDOWN | OTP_LIMIT_REACHED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "OTP_DELIVERY_FAILED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/guide/verify-otp": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "2. Auth · Guide sign-up"
+                ],
+                "summary": "Guide sign-up · Step 2 — verify SMS OTP",
+                "parameters": [
+                    {
+                        "description": "Phone + OTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PhoneOTPVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.VerificationTicketResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "OTP_INVALID | OTP_EXPIRED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "ACCOUNT_TEMPORARILY_LOCKED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/user/complete": {
+            "post": {
+                "description": "Creates the tourist account and logs in (returns tokens). `password` is optional: without\nit the tourist signs in with email OTP or Google/Apple. Then follow `user.onboarding.next_step`.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "1. Auth · Tourist sign-up"
+                ],
+                "summary": "Tourist sign-up · Step 3 — create account",
+                "parameters": [
+                    {
+                        "description": "Account details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CompleteUserRegistrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "VERIFICATION_TOKEN_INVALID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "EMAIL_ALREADY_REGISTERED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/user/send-otp": {
+            "post": {
+                "description": "Sends a 6-digit code to the email. Fails with `EMAIL_ALREADY_REGISTERED` (409) if the email\nalready has an account (send the user to login). Re-sending is allowed after\n`resend_after_seconds`; otherwise `OTP_COOLDOWN` (429, see `retry_after_seconds`).\nRequires `X-Captcha-Token` header when captcha is enabled.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "1. Auth · Tourist sign-up"
+                ],
+                "summary": "Tourist sign-up · Step 1 — send email OTP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cloudflare Turnstile token (when CAPTCHA_ENABLED)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.EmailOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OTPSentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "EMAIL_ALREADY_REGISTERED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "OTP_COOLDOWN | OTP_LIMIT_REACHED | RATE_LIMITED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "OTP_DELIVERY_FAILED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/user/verify-otp": {
+            "post": {
+                "description": "Returns a single-use `token` (registration_token) valid for USER_REGISTRATION_TOKEN_EXPIRE_IN.\nKeep it in memory and send it with step 3. Wrong codes return `OTP_INVALID` with\n`details.remaining_attempts`; after OTP_MAX_ATTEMPTS the email is blocked for USER_BLOCK_TIME\n(`ACCOUNT_TEMPORARILY_LOCKED`, 429).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "1. Auth · Tourist sign-up"
+                ],
+                "summary": "Tourist sign-up · Step 2 — verify email OTP",
+                "parameters": [
+                    {
+                        "description": "Email + OTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.EmailOTPVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.VerificationTicketResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "OTP_INVALID | OTP_EXPIRED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "ACCOUNT_TEMPORARILY_LOCKED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/token/refresh": {
+            "post": {
+                "description": "Call when an API returns 401 `TOKEN_INVALID`, or shortly before `expires_in_seconds`.\nThe old refresh token becomes invalid — always store the new one. Re-using an old refresh\ntoken (theft) revokes the session. If two tabs refresh at once, the loser gets\n`REFRESH_TOKEN_ROTATED` (409): re-read the newest token from storage and retry.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "3. Auth · Login \u0026 session"
+                ],
+                "summary": "Refresh access token (rotates refresh token)",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "REFRESH_TOKEN_INVALID → redirect to login",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "REFRESH_TOKEN_ROTATED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/guides": {
+            "get": {
+                "description": "Only approved, active and available guides are listed. Contact info is never exposed.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "7. Guides · Public"
+                ],
+                "summary": "Browse verified guides (public)",
+                "parameters": [
+                    {
+                        "maxLength": 60,
+                        "type": "string",
+                        "example": "sylhet",
+                        "name": "area",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "en",
+                        "name": "language",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 20,
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "example": 2000,
+                        "name": "max_rate",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 0,
+                        "type": "integer",
+                        "example": 300,
+                        "name": "min_rate",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 1000,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "example": "rahim",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "rating",
+                            "experience",
+                            "price_low",
+                            "price_high",
+                            "newest"
+                        ],
+                        "type": "string",
+                        "example": "rating",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 40,
+                        "type": "string",
+                        "example": "tea_garden",
+                        "name": "specialty",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GuidePage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/guides/me/availability": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "6. Guide · My guide profile \u0026 KYC"
+                ],
+                "summary": "Toggle availability (hide/show in search)",
+                "parameters": [
+                    {
+                        "description": "Availability",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AvailabilityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/guides/me/profile": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Full replace (PUT). Either `hourly_rate` or `daily_rate` is required (BDT, whole taka).\n`languages`: ISO 639-1 codes (bn, en, hi...). `service_areas`: lowercase slugs (dhaka, sylhet,\ncoxs-bazar...). `specialties`: see GET /guides/options.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "6. Guide · My guide profile \u0026 KYC"
+                ],
+                "summary": "Create / replace my guide profile",
+                "parameters": [
+                    {
+                        "description": "Guide profile",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpsertGuideProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "403": {
+                        "description": "FORBIDDEN (not a guide)",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/guides/me/verification": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "6. Guide · My guide profile \u0026 KYC"
+                ],
+                "summary": "Latest verification status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.VerificationStatusResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "VERIFICATION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "multipart/form-data. Allowed only when `onboarding.next_step` is `submit_verification` or\n`resubmit_verification` (profile must be complete, see `GUIDE_PROFILE_INCOMPLETE.details`).\nImages: JPEG/PNG/WEBP, max MAX_UPLOAD_SIZE_MB each, min 300x300. Documents are stored privately\n(never public URLs) and the NID number is encrypted (AES-256-GCM). An admin reviews it;\nthe guide gets an SMS with the result.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "6. Guide · My guide profile \u0026 KYC"
+                ],
+                "summary": "Submit identity verification (NID + selfie)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "NID number (10, 13 or 17 digits)",
+                        "name": "nid_number",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Front side of NID",
+                        "name": "nid_front",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Back side of NID",
+                        "name": "nid_back",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Selfie holding the NID",
+                        "name": "selfie",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.VerificationStatusResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "VERIFICATION_PENDING | ALREADY_VERIFIED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "GUIDE_PROFILE_INCOMPLETE | VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "UPLOAD_UNAVAILABLE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/guides/options": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "7. Guides · Public"
+                ],
+                "summary": "Allowed values for guide filters/forms",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GuideOptionsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/guides/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "7. Guides · Public"
+                ],
+                "summary": "Public guide profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Guide user ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PublicGuideResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "GUIDE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Full private profile. Use `onboarding.next_step` to route the user to the right screen\nafter login (complete_profile | submit_verification | awaiting_review | resubmit_verification | done).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Get my account",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "UNAUTHORIZED | TOKEN_INVALID | SESSION_REVOKED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-deletes the account and signs out everywhere. `confirm` must be \"DELETE\";\n`password` is required when the account has one.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Delete my account",
+                "parameters": [
+                    {
+                        "description": "Confirmation",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.DeleteAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "WRONG_PASSWORD",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "PASSWORD_REQUIRED | VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/avatar": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "multipart/form-data with field `avatar`. JPEG, PNG or WEBP, max MAX_UPLOAD_SIZE_MB, min 100x100.\nThe file type is detected from its content, not its name.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Upload / replace profile photo",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file",
+                        "name": "avatar",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "413": {
+                        "description": "PAYLOAD_TOO_LARGE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_IMAGE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "UPLOAD_UNAVAILABLE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Remove profile photo",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/contacts/email/send-otp": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lets guides (who signed up with phone) add an email, or anyone change their email.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Add / change email · Step 1 — send OTP",
+                "parameters": [
+                    {
+                        "description": "New email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.EmailOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OTPSentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "EMAIL_ALREADY_REGISTERED | CONTACT_ALREADY_VERIFIED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/contacts/email/verify": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Add / change email · Step 2 — verify OTP",
+                "parameters": [
+                    {
+                        "description": "Email + OTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.EmailOTPVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "OTP_INVALID | OTP_EXPIRED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/contacts/phone/send-otp": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Optional for tourists (international numbers are not SMS-verified — use `whatsapp_number`\nin the profile instead). Guides can change their phone number here.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Add / change BD phone · Step 1 — send SMS OTP",
+                "parameters": [
+                    {
+                        "description": "New BD phone",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PhoneOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OTPSentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "PHONE_ALREADY_REGISTERED | CONTACT_ALREADY_VERIFIED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/contacts/phone/verify": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Add / change BD phone · Step 2 — verify OTP",
+                "parameters": [
+                    {
+                        "description": "Phone + OTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PhoneOTPVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "OTP_INVALID | OTP_EXPIRED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/password": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "`current_password` is required when `has_password` is true. Google/Apple-only accounts can\nset a first password without it. All other devices are signed out.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Change (or set first) password",
+                "parameters": [
+                    {
+                        "description": "Passwords",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ChangePasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "401": {
+                        "description": "WRONG_PASSWORD",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR | PASSWORD_UNCHANGED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "ACCOUNT_TEMPORARILY_LOCKED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/profile": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "PATCH semantics — send only the fields that changed. Empty string clears an optional field.\nTourists must set `country_code` to finish onboarding. Guides must set `date_of_birth`\n(18+), `city` and an avatar. A verified guide cannot change `date_of_birth`.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Update my personal profile (partial)",
+                "parameters": [
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateProfileRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MeResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR | UNDERAGE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "List my logged-in devices",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.SessionResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/sessions/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "5. Me · Profile \u0026 account"
+                ],
+                "summary": "Sign out a specific device",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Session ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    },
+                    "404": {
+                        "description": "SESSION_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "dto.AdminUserPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdminUserResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageMeta"
+                }
+            }
+        },
+        "dto.AdminUserResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Rahim Uddin"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+8801712345678"
+                },
+                "phone_verified": {
+                    "type": "boolean"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "guide"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                },
+                "verification_status": {
+                    "type": "string",
+                    "example": "pending"
+                }
+            }
+        },
+        "dto.AdminVerificationDetailResponse": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "date_of_birth": {
+                    "type": "string",
+                    "example": "1990-01-15"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Rahim Uddin"
+                },
+                "guide_profile": {
+                    "$ref": "#/definitions/dto.GuideProfileResponse"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nid_back_url": {
+                    "type": "string"
+                },
+                "nid_front_url": {
+                    "type": "string"
+                },
+                "nid_last4": {
+                    "type": "string",
+                    "example": "4821"
+                },
+                "nid_number": {
+                    "type": "string",
+                    "example": "19901234567894821"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+8801712345678"
+                },
+                "rejection_reason": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "selfie_url": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                },
+                "submitted_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.AdminVerificationPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.AdminVerificationResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageMeta"
+                }
+            }
+        },
+        "dto.AdminVerificationResponse": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "example": "Rahim Uddin"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nid_last4": {
+                    "type": "string",
+                    "example": "4821"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+8801712345678"
+                },
+                "rejection_reason": {
+                    "type": "string"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "reviewed_by": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                },
+                "submitted_at": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIs..."
+                },
+                "expires_in_seconds": {
+                    "type": "integer",
+                    "example": 900
+                },
+                "is_new_user": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "refresh_expires_in_seconds": {
+                    "type": "integer",
+                    "example": 2592000
+                },
+                "refresh_token": {
+                    "type": "string",
+                    "example": "mJ0p...refresh-token"
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                },
+                "user": {
+                    "$ref": "#/definitions/dto.MeResponse"
+                }
+            }
+        },
+        "dto.AvailabilityRequest": {
+            "type": "object",
+            "required": [
+                "is_available"
+            ],
+            "properties": {
+                "is_available": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "dto.ChangePasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password"
+            ],
+            "properties": {
+                "current_password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "example": "OldPass2026!"
+                },
+                "new_password": {
+                    "type": "string",
+                    "example": "NewPass2026!"
+                }
+            }
+        },
+        "dto.CompleteGuideRegistrationRequest": {
+            "type": "object",
+            "required": [
+                "full_name",
+                "password",
+                "registration_token"
+            ],
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Rahim Uddin"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "Guide2026!"
+                },
+                "registration_token": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 20,
+                    "example": "q4Zr8...registration-token"
+                }
+            }
+        },
+        "dto.CompleteUserRegistrationRequest": {
+            "type": "object",
+            "required": [
+                "full_name",
+                "registration_token"
+            ],
+            "properties": {
+                "country_code": {
+                    "type": "string",
+                    "example": "GB"
+                },
+                "full_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Emma Watson"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "Travel2026!"
+                },
+                "preferred_language": {
+                    "type": "string",
+                    "example": "en"
+                },
+                "registration_token": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 20,
+                    "example": "q4Zr8...registration-token"
+                }
+            }
+        },
+        "dto.DeleteAccountRequest": {
+            "type": "object",
+            "required": [
+                "confirm"
+            ],
+            "properties": {
+                "confirm": {
+                    "type": "string",
+                    "example": "DELETE"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "example": "Travel2026!"
+                }
+            }
+        },
+        "dto.EmailOTPRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "example": "traveler@example.com"
+                }
+            }
+        },
+        "dto.EmailOTPVerifyRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "otp"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "example": "traveler@example.com"
+                },
+                "otp": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "minLength": 4,
+                    "example": "482913"
+                }
+            }
+        },
+        "dto.GuideOptionsResponse": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "sort_options": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "rating",
+                        "experience",
+                        "price_low",
+                        "price_high",
+                        "newest"
+                    ]
+                },
+                "specialties": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "history_culture",
+                        "food",
+                        "nature_wildlife"
+                    ]
+                }
+            }
+        },
+        "dto.GuidePage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.PublicGuideResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/dto.PageMeta"
+                }
+            }
+        },
+        "dto.GuideProfileResponse": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string",
+                    "example": "I have been guiding travellers..."
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "daily_rate": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "experience_years": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "headline": {
+                    "type": "string",
+                    "example": "Licensed Sundarbans \u0026 Old Dhaka guide"
+                },
+                "hourly_rate": {
+                    "type": "integer",
+                    "example": 800
+                },
+                "is_available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bn",
+                        "en"
+                    ]
+                },
+                "license_number": {
+                    "type": "string",
+                    "example": "BTB-2021-0457"
+                },
+                "max_group_size": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "rating_avg": {
+                    "type": "number",
+                    "example": 4.8
+                },
+                "rating_count": {
+                    "type": "integer",
+                    "example": 37
+                },
+                "service_areas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "dhaka",
+                        "sundarbans"
+                    ]
+                },
+                "specialties": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "nature_wildlife",
+                        "river_cruise"
+                    ]
+                },
+                "total_tours": {
+                    "type": "integer",
+                    "example": 52
+                },
+                "verification_status": {
+                    "type": "string",
+                    "enum": [
+                        "unverified",
+                        "pending",
+                        "approved",
+                        "rejected"
+                    ],
+                    "example": "approved"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.IdentifierOTPRequest": {
+            "type": "object",
+            "required": [
+                "identifier",
+                "otp"
+            ],
+            "properties": {
+                "identifier": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 3,
+                    "example": "01712345678"
+                },
+                "otp": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "minLength": 4,
+                    "example": "482913"
+                }
+            }
+        },
+        "dto.IdentifierRequest": {
+            "type": "object",
+            "required": [
+                "identifier"
+            ],
+            "properties": {
+                "identifier": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 3,
+                    "example": "01712345678"
+                }
+            }
+        },
+        "dto.LoginRequest": {
+            "type": "object",
+            "required": [
+                "identifier",
+                "password"
+            ],
+            "properties": {
+                "identifier": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 3,
+                    "example": "traveler@example.com"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 1,
+                    "example": "Travel2026!"
+                }
+            }
+        },
+        "dto.MeResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "traveler@example.com"
+                },
+                "email_verified": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "guide_profile": {
+                    "$ref": "#/definitions/dto.GuideProfileResponse"
+                },
+                "guide_verification": {
+                    "$ref": "#/definitions/dto.VerificationStatusResponse"
+                },
+                "has_password": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "linked_providers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "google"
+                    ]
+                },
+                "onboarding": {
+                    "$ref": "#/definitions/dto.Onboarding"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+8801712345678"
+                },
+                "phone_verified": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "profile": {
+                    "$ref": "#/definitions/dto.ProfileResponse"
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "user",
+                        "guide",
+                        "admin"
+                    ],
+                    "example": "user"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "suspended",
+                        "deleted"
+                    ],
+                    "example": "active"
+                }
+            }
+        },
+        "dto.OAuthRequest": {
+            "type": "object",
+            "required": [
+                "id_token"
+            ],
+            "properties": {
+                "full_name": {
+                    "description": "Apple only sends the user's name to the client on the very first sign-in; forward it here.",
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Emma Watson"
+                },
+                "id_token": {
+                    "type": "string",
+                    "maxLength": 8192,
+                    "minLength": 20,
+                    "example": "eyJhbGciOiJSUzI1NiIs..."
+                },
+                "nonce": {
+                    "description": "Optional raw nonce you passed to the provider (replay protection).",
+                    "type": "string",
+                    "maxLength": 256,
+                    "example": "n-0S6_WzA2Mj"
+                }
+            }
+        },
+        "dto.OTPSentResponse": {
+            "type": "object",
+            "properties": {
+                "channel": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "sms"
+                    ],
+                    "example": "email"
+                },
+                "destination": {
+                    "description": "masked",
+                    "type": "string",
+                    "example": "tr*****@example.com"
+                },
+                "dev_otp": {
+                    "description": "DevOTP is present ONLY in development when DEV_EXPOSE_OTP=true. Never in production.",
+                    "type": "string",
+                    "example": "123456"
+                },
+                "expires_in_seconds": {
+                    "type": "integer",
+                    "example": 300
+                },
+                "resend_after_seconds": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
+        "dto.Onboarding": {
+            "type": "object",
+            "properties": {
+                "completed": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "missing_fields": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "country_code"
+                    ]
+                },
+                "next_step": {
+                    "type": "string",
+                    "enum": [
+                        "complete_profile",
+                        "submit_verification",
+                        "awaiting_review",
+                        "resubmit_verification",
+                        "done"
+                    ],
+                    "example": "complete_profile"
+                }
+            }
+        },
+        "dto.PageMeta": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 57
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "dto.PhoneOTPRequest": {
+            "type": "object",
+            "required": [
+                "phone"
+            ],
+            "properties": {
+                "phone": {
+                    "type": "string",
+                    "example": "01712345678"
+                }
+            }
+        },
+        "dto.PhoneOTPVerifyRequest": {
+            "type": "object",
+            "required": [
+                "otp",
+                "phone"
+            ],
+            "properties": {
+                "otp": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "minLength": 4,
+                    "example": "482913"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "01712345678"
+                }
+            }
+        },
+        "dto.ProfileResponse": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string",
+                    "example": "https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg"
+                },
+                "bio": {
+                    "type": "string",
+                    "example": "Backpacker who loves rivers."
+                },
+                "city": {
+                    "type": "string",
+                    "example": "London"
+                },
+                "country_code": {
+                    "type": "string",
+                    "example": "GB"
+                },
+                "date_of_birth": {
+                    "type": "string",
+                    "example": "1995-04-21"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Emma Watson"
+                },
+                "gender": {
+                    "type": "string",
+                    "example": "female"
+                },
+                "preferred_language": {
+                    "type": "string",
+                    "example": "en"
+                },
+                "whatsapp_number": {
+                    "type": "string",
+                    "example": "+447911123456"
+                }
+            }
+        },
+        "dto.PublicGuideResponse": {
+            "type": "object",
+            "properties": {
+                "about": {
+                    "type": "string",
+                    "example": "I have been guiding travellers..."
+                },
+                "avatar_url": {
+                    "type": "string",
+                    "example": "https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg"
+                },
+                "city": {
+                    "type": "string",
+                    "example": "Khulna"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "daily_rate": {
+                    "type": "integer",
+                    "example": 5000
+                },
+                "experience_years": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Rahim Uddin"
+                },
+                "headline": {
+                    "type": "string",
+                    "example": "Licensed Sundarbans \u0026 Old Dhaka guide"
+                },
+                "hourly_rate": {
+                    "type": "integer",
+                    "example": 800
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "is_licensed": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "is_verified": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bn",
+                        "en"
+                    ]
+                },
+                "max_group_size": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "member_since": {
+                    "type": "string"
+                },
+                "rating_avg": {
+                    "type": "number",
+                    "example": 4.8
+                },
+                "rating_count": {
+                    "type": "integer",
+                    "example": 37
+                },
+                "service_areas": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "dhaka",
+                        "sundarbans"
+                    ]
+                },
+                "specialties": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "nature_wildlife"
+                    ]
+                },
+                "total_tours": {
+                    "type": "integer",
+                    "example": 52
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 20,
+                    "example": "mJ0p...refresh-token"
+                }
+            }
+        },
+        "dto.RejectVerificationRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 5,
+                    "example": "NID photo is blurry, please upload a clearer image"
+                }
+            }
+        },
+        "dto.ResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password",
+                "reset_token"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string",
+                    "example": "NewPass2026!"
+                },
+                "reset_token": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 20,
+                    "example": "Yb7...reset-token"
+                }
+            }
+        },
+        "dto.SessionResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "current": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d12"
+                },
+                "ip_address": {
+                    "type": "string",
+                    "example": "103.4.145.2"
+                },
+                "last_used_at": {
+                    "type": "string"
+                },
+                "user_agent": {
+                    "type": "string",
+                    "example": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)"
+                }
+            }
+        },
+        "dto.UpdateProfileRequest": {
+            "type": "object",
+            "properties": {
+                "bio": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Backpacker who loves rivers and street food."
+                },
+                "city": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "London"
+                },
+                "country_code": {
+                    "type": "string",
+                    "example": "GB"
+                },
+                "date_of_birth": {
+                    "type": "string",
+                    "example": "1995-04-21"
+                },
+                "full_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Emma Watson"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female",
+                        "other",
+                        "prefer_not_to_say"
+                    ],
+                    "example": "female"
+                },
+                "preferred_language": {
+                    "type": "string",
+                    "example": "en"
+                },
+                "whatsapp_number": {
+                    "type": "string",
+                    "example": "+447911123456"
+                }
+            }
+        },
+        "dto.UpdateUserStatusRequest": {
+            "type": "object",
+            "required": [
+                "status"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Multiple fraud reports"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "suspended"
+                    ],
+                    "example": "suspended"
+                }
+            }
+        },
+        "dto.UpsertGuideProfileRequest": {
+            "type": "object",
+            "required": [
+                "about",
+                "headline",
+                "languages",
+                "max_group_size",
+                "service_areas"
+            ],
+            "properties": {
+                "about": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "minLength": 50,
+                    "example": "I have been guiding travellers through the Sundarbans mangrove forest for 8 years..."
+                },
+                "daily_rate": {
+                    "type": "integer",
+                    "maximum": 500000,
+                    "minimum": 0,
+                    "example": 5000
+                },
+                "experience_years": {
+                    "type": "integer",
+                    "maximum": 60,
+                    "minimum": 0,
+                    "example": 8
+                },
+                "headline": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "minLength": 10,
+                    "example": "Licensed Sundarbans \u0026 Old Dhaka guide"
+                },
+                "hourly_rate": {
+                    "type": "integer",
+                    "maximum": 100000,
+                    "minimum": 0,
+                    "example": 800
+                },
+                "languages": {
+                    "type": "array",
+                    "maxItems": 10,
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "bn",
+                        "en",
+                        "hi"
+                    ]
+                },
+                "license_number": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "example": "BTB-2021-0457"
+                },
+                "max_group_size": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "example": 8
+                },
+                "service_areas": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "dhaka",
+                        "sundarbans",
+                        "khulna"
+                    ]
+                },
+                "specialties": {
+                    "type": "array",
+                    "maxItems": 15,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "nature_wildlife",
+                        "river_cruise"
+                    ]
+                }
+            }
+        },
+        "dto.VerificationStatusResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d11"
+                },
+                "nid_last4": {
+                    "type": "string",
+                    "example": "4821"
+                },
+                "rejection_reason": {
+                    "type": "string",
+                    "example": "NID photo is blurry"
+                },
+                "reviewed_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "approved",
+                        "rejected"
+                    ],
+                    "example": "rejected"
+                },
+                "submitted_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.VerificationTicketResponse": {
+            "type": "object",
+            "properties": {
+                "expires_in_seconds": {
+                    "type": "integer",
+                    "example": 1800
+                },
+                "token": {
+                    "type": "string",
+                    "example": "q4Zr8...registration-token"
+                }
+            }
+        },
+        "http.APIVersion": {
+            "type": "object",
+            "properties": {
+                "base_path": {
+                    "type": "string",
+                    "example": "/api/v1"
+                },
+                "docs": {
+                    "type": "string",
+                    "example": "/swagger/index.html"
+                },
+                "released_at": {
+                    "type": "string",
+                    "example": "2026-11-21"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "stable",
+                        "beta",
+                        "deprecated"
+                    ],
+                    "example": "stable"
+                },
+                "sunset_at": {
+                    "description": "set when a version is deprecated",
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "v1"
+                }
+            }
+        },
+        "http.BuildInfo": {
+            "type": "object",
+            "properties": {
+                "build_time": {
+                    "type": "string",
+                    "example": "2026-11-21T06:00:00Z"
+                },
+                "commit": {
+                    "type": "string",
+                    "example": "a1b2c3d"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
+                }
+            }
+        },
+        "http.VersionInfo": {
+            "type": "object",
+            "properties": {
+                "api_version": {
+                    "type": "string",
+                    "example": "v1"
+                },
+                "build": {
+                    "$ref": "#/definitions/http.BuildInfo"
+                },
+                "environment": {
+                    "type": "string",
+                    "example": "development"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "CholoBangladesh API"
+                },
+                "server_time": {
+                    "type": "string"
+                },
+                "versions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/http.APIVersion"
+                    }
+                }
+            }
+        },
+        "response.Body": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "error": {
+                    "$ref": "#/definitions/response.ErrorBody"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "response.ErrorBody": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "VALIDATION_ERROR"
+                },
+                "details": {},
+                "retry_after_seconds": {
+                    "type": "integer",
+                    "example": 60
+                }
+            }
+        },
+        "response.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "$ref": "#/definitions/response.ErrorBody"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "some fields are invalid"
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type: **Bearer \u0026lt;access_token\u0026gt;** (from login / register / refresh)",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

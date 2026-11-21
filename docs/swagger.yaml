@@ -1,0 +1,2588 @@
+basePath: /api/v1
+definitions:
+  dto.AdminUserPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.AdminUserResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageMeta'
+    type: object
+  dto.AdminUserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      full_name:
+        example: Rahim Uddin
+        type: string
+      id:
+        type: string
+      last_login_at:
+        type: string
+      phone:
+        example: "+8801712345678"
+        type: string
+      phone_verified:
+        type: boolean
+      role:
+        example: guide
+        type: string
+      status:
+        example: active
+        type: string
+      verification_status:
+        example: pending
+        type: string
+    type: object
+  dto.AdminVerificationDetailResponse:
+    properties:
+      avatar_url:
+        type: string
+      date_of_birth:
+        example: "1990-01-15"
+        type: string
+      full_name:
+        example: Rahim Uddin
+        type: string
+      guide_profile:
+        $ref: '#/definitions/dto.GuideProfileResponse'
+      id:
+        type: string
+      nid_back_url:
+        type: string
+      nid_front_url:
+        type: string
+      nid_last4:
+        example: "4821"
+        type: string
+      nid_number:
+        example: "19901234567894821"
+        type: string
+      phone:
+        example: "+8801712345678"
+        type: string
+      rejection_reason:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      selfie_url:
+        type: string
+      status:
+        example: pending
+        type: string
+      submitted_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  dto.AdminVerificationPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.AdminVerificationResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageMeta'
+    type: object
+  dto.AdminVerificationResponse:
+    properties:
+      full_name:
+        example: Rahim Uddin
+        type: string
+      id:
+        type: string
+      nid_last4:
+        example: "4821"
+        type: string
+      phone:
+        example: "+8801712345678"
+        type: string
+      rejection_reason:
+        type: string
+      reviewed_at:
+        type: string
+      reviewed_by:
+        type: string
+      status:
+        example: pending
+        type: string
+      submitted_at:
+        type: string
+      user_id:
+        type: string
+    type: object
+  dto.AuthResponse:
+    properties:
+      access_token:
+        example: eyJhbGciOiJIUzI1NiIs...
+        type: string
+      expires_in_seconds:
+        example: 900
+        type: integer
+      is_new_user:
+        example: false
+        type: boolean
+      refresh_expires_in_seconds:
+        example: 2592000
+        type: integer
+      refresh_token:
+        example: mJ0p...refresh-token
+        type: string
+      token_type:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/dto.MeResponse'
+    type: object
+  dto.AvailabilityRequest:
+    properties:
+      is_available:
+        example: true
+        type: boolean
+    required:
+    - is_available
+    type: object
+  dto.ChangePasswordRequest:
+    properties:
+      current_password:
+        example: OldPass2026!
+        maxLength: 72
+        type: string
+      new_password:
+        example: NewPass2026!
+        type: string
+    required:
+    - new_password
+    type: object
+  dto.CompleteGuideRegistrationRequest:
+    properties:
+      full_name:
+        example: Rahim Uddin
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        example: Guide2026!
+        type: string
+      registration_token:
+        example: q4Zr8...registration-token
+        maxLength: 200
+        minLength: 20
+        type: string
+    required:
+    - full_name
+    - password
+    - registration_token
+    type: object
+  dto.CompleteUserRegistrationRequest:
+    properties:
+      country_code:
+        example: GB
+        type: string
+      full_name:
+        example: Emma Watson
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        example: Travel2026!
+        type: string
+      preferred_language:
+        example: en
+        type: string
+      registration_token:
+        example: q4Zr8...registration-token
+        maxLength: 200
+        minLength: 20
+        type: string
+    required:
+    - full_name
+    - registration_token
+    type: object
+  dto.DeleteAccountRequest:
+    properties:
+      confirm:
+        example: DELETE
+        type: string
+      password:
+        example: Travel2026!
+        maxLength: 72
+        type: string
+    required:
+    - confirm
+    type: object
+  dto.EmailOTPRequest:
+    properties:
+      email:
+        example: traveler@example.com
+        maxLength: 150
+        type: string
+    required:
+    - email
+    type: object
+  dto.EmailOTPVerifyRequest:
+    properties:
+      email:
+        example: traveler@example.com
+        maxLength: 150
+        type: string
+      otp:
+        example: "482913"
+        maxLength: 10
+        minLength: 4
+        type: string
+    required:
+    - email
+    - otp
+    type: object
+  dto.GuideOptionsResponse:
+    properties:
+      currency:
+        example: BDT
+        type: string
+      sort_options:
+        example:
+        - rating
+        - experience
+        - price_low
+        - price_high
+        - newest
+        items:
+          type: string
+        type: array
+      specialties:
+        example:
+        - history_culture
+        - food
+        - nature_wildlife
+        items:
+          type: string
+        type: array
+    type: object
+  dto.GuidePage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.PublicGuideResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/dto.PageMeta'
+    type: object
+  dto.GuideProfileResponse:
+    properties:
+      about:
+        example: I have been guiding travellers...
+        type: string
+      currency:
+        example: BDT
+        type: string
+      daily_rate:
+        example: 5000
+        type: integer
+      experience_years:
+        example: 8
+        type: integer
+      headline:
+        example: Licensed Sundarbans & Old Dhaka guide
+        type: string
+      hourly_rate:
+        example: 800
+        type: integer
+      is_available:
+        example: true
+        type: boolean
+      languages:
+        example:
+        - bn
+        - en
+        items:
+          type: string
+        type: array
+      license_number:
+        example: BTB-2021-0457
+        type: string
+      max_group_size:
+        example: 8
+        type: integer
+      rating_avg:
+        example: 4.8
+        type: number
+      rating_count:
+        example: 37
+        type: integer
+      service_areas:
+        example:
+        - dhaka
+        - sundarbans
+        items:
+          type: string
+        type: array
+      specialties:
+        example:
+        - nature_wildlife
+        - river_cruise
+        items:
+          type: string
+        type: array
+      total_tours:
+        example: 52
+        type: integer
+      verification_status:
+        enum:
+        - unverified
+        - pending
+        - approved
+        - rejected
+        example: approved
+        type: string
+      verified_at:
+        type: string
+    type: object
+  dto.IdentifierOTPRequest:
+    properties:
+      identifier:
+        example: "01712345678"
+        maxLength: 150
+        minLength: 3
+        type: string
+      otp:
+        example: "482913"
+        maxLength: 10
+        minLength: 4
+        type: string
+    required:
+    - identifier
+    - otp
+    type: object
+  dto.IdentifierRequest:
+    properties:
+      identifier:
+        example: "01712345678"
+        maxLength: 150
+        minLength: 3
+        type: string
+    required:
+    - identifier
+    type: object
+  dto.LoginRequest:
+    properties:
+      identifier:
+        example: traveler@example.com
+        maxLength: 150
+        minLength: 3
+        type: string
+      password:
+        example: Travel2026!
+        maxLength: 72
+        minLength: 1
+        type: string
+    required:
+    - identifier
+    - password
+    type: object
+  dto.MeResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        example: traveler@example.com
+        type: string
+      email_verified:
+        example: true
+        type: boolean
+      guide_profile:
+        $ref: '#/definitions/dto.GuideProfileResponse'
+      guide_verification:
+        $ref: '#/definitions/dto.VerificationStatusResponse'
+      has_password:
+        example: true
+        type: boolean
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      last_login_at:
+        type: string
+      linked_providers:
+        example:
+        - google
+        items:
+          type: string
+        type: array
+      onboarding:
+        $ref: '#/definitions/dto.Onboarding'
+      phone:
+        example: "+8801712345678"
+        type: string
+      phone_verified:
+        example: false
+        type: boolean
+      profile:
+        $ref: '#/definitions/dto.ProfileResponse'
+      role:
+        enum:
+        - user
+        - guide
+        - admin
+        example: user
+        type: string
+      status:
+        enum:
+        - active
+        - suspended
+        - deleted
+        example: active
+        type: string
+    type: object
+  dto.OAuthRequest:
+    properties:
+      full_name:
+        description: Apple only sends the user's name to the client on the very first
+          sign-in; forward it here.
+        example: Emma Watson
+        maxLength: 100
+        type: string
+      id_token:
+        example: eyJhbGciOiJSUzI1NiIs...
+        maxLength: 8192
+        minLength: 20
+        type: string
+      nonce:
+        description: Optional raw nonce you passed to the provider (replay protection).
+        example: n-0S6_WzA2Mj
+        maxLength: 256
+        type: string
+    required:
+    - id_token
+    type: object
+  dto.OTPSentResponse:
+    properties:
+      channel:
+        enum:
+        - email
+        - sms
+        example: email
+        type: string
+      destination:
+        description: masked
+        example: tr*****@example.com
+        type: string
+      dev_otp:
+        description: DevOTP is present ONLY in development when DEV_EXPOSE_OTP=true.
+          Never in production.
+        example: "123456"
+        type: string
+      expires_in_seconds:
+        example: 300
+        type: integer
+      resend_after_seconds:
+        example: 60
+        type: integer
+    type: object
+  dto.Onboarding:
+    properties:
+      completed:
+        example: false
+        type: boolean
+      missing_fields:
+        example:
+        - country_code
+        items:
+          type: string
+        type: array
+      next_step:
+        enum:
+        - complete_profile
+        - submit_verification
+        - awaiting_review
+        - resubmit_verification
+        - done
+        example: complete_profile
+        type: string
+    type: object
+  dto.PageMeta:
+    properties:
+      limit:
+        example: 20
+        type: integer
+      page:
+        example: 1
+        type: integer
+      total:
+        example: 57
+        type: integer
+      total_pages:
+        example: 3
+        type: integer
+    type: object
+  dto.PhoneOTPRequest:
+    properties:
+      phone:
+        example: "01712345678"
+        type: string
+    required:
+    - phone
+    type: object
+  dto.PhoneOTPVerifyRequest:
+    properties:
+      otp:
+        example: "482913"
+        maxLength: 10
+        minLength: 4
+        type: string
+      phone:
+        example: "01712345678"
+        type: string
+    required:
+    - otp
+    - phone
+    type: object
+  dto.ProfileResponse:
+    properties:
+      avatar_url:
+        example: https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg
+        type: string
+      bio:
+        example: Backpacker who loves rivers.
+        type: string
+      city:
+        example: London
+        type: string
+      country_code:
+        example: GB
+        type: string
+      date_of_birth:
+        example: "1995-04-21"
+        type: string
+      full_name:
+        example: Emma Watson
+        type: string
+      gender:
+        example: female
+        type: string
+      preferred_language:
+        example: en
+        type: string
+      whatsapp_number:
+        example: "+447911123456"
+        type: string
+    type: object
+  dto.PublicGuideResponse:
+    properties:
+      about:
+        example: I have been guiding travellers...
+        type: string
+      avatar_url:
+        example: https://res.cloudinary.com/demo/image/upload/v1/avatar.jpg
+        type: string
+      city:
+        example: Khulna
+        type: string
+      currency:
+        example: BDT
+        type: string
+      daily_rate:
+        example: 5000
+        type: integer
+      experience_years:
+        example: 8
+        type: integer
+      full_name:
+        example: Rahim Uddin
+        type: string
+      headline:
+        example: Licensed Sundarbans & Old Dhaka guide
+        type: string
+      hourly_rate:
+        example: 800
+        type: integer
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      is_licensed:
+        example: true
+        type: boolean
+      is_verified:
+        example: true
+        type: boolean
+      languages:
+        example:
+        - bn
+        - en
+        items:
+          type: string
+        type: array
+      max_group_size:
+        example: 8
+        type: integer
+      member_since:
+        type: string
+      rating_avg:
+        example: 4.8
+        type: number
+      rating_count:
+        example: 37
+        type: integer
+      service_areas:
+        example:
+        - dhaka
+        - sundarbans
+        items:
+          type: string
+        type: array
+      specialties:
+        example:
+        - nature_wildlife
+        items:
+          type: string
+        type: array
+      total_tours:
+        example: 52
+        type: integer
+      verified_at:
+        type: string
+    type: object
+  dto.RefreshRequest:
+    properties:
+      refresh_token:
+        example: mJ0p...refresh-token
+        maxLength: 200
+        minLength: 20
+        type: string
+    required:
+    - refresh_token
+    type: object
+  dto.RejectVerificationRequest:
+    properties:
+      reason:
+        example: NID photo is blurry, please upload a clearer image
+        maxLength: 500
+        minLength: 5
+        type: string
+    required:
+    - reason
+    type: object
+  dto.ResetPasswordRequest:
+    properties:
+      new_password:
+        example: NewPass2026!
+        type: string
+      reset_token:
+        example: Yb7...reset-token
+        maxLength: 200
+        minLength: 20
+        type: string
+    required:
+    - new_password
+    - reset_token
+    type: object
+  dto.SessionResponse:
+    properties:
+      created_at:
+        type: string
+      current:
+        example: true
+        type: boolean
+      expires_at:
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d12
+        type: string
+      ip_address:
+        example: 103.4.145.2
+        type: string
+      last_used_at:
+        type: string
+      user_agent:
+        example: Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)
+        type: string
+    type: object
+  dto.UpdateProfileRequest:
+    properties:
+      bio:
+        example: Backpacker who loves rivers and street food.
+        maxLength: 500
+        type: string
+      city:
+        example: London
+        maxLength: 100
+        type: string
+      country_code:
+        example: GB
+        type: string
+      date_of_birth:
+        example: "1995-04-21"
+        type: string
+      full_name:
+        example: Emma Watson
+        maxLength: 100
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        - other
+        - prefer_not_to_say
+        example: female
+        type: string
+      preferred_language:
+        example: en
+        type: string
+      whatsapp_number:
+        example: "+447911123456"
+        type: string
+    type: object
+  dto.UpdateUserStatusRequest:
+    properties:
+      reason:
+        example: Multiple fraud reports
+        maxLength: 500
+        type: string
+      status:
+        enum:
+        - active
+        - suspended
+        example: suspended
+        type: string
+    required:
+    - status
+    type: object
+  dto.UpsertGuideProfileRequest:
+    properties:
+      about:
+        example: I have been guiding travellers through the Sundarbans mangrove forest
+          for 8 years...
+        maxLength: 2000
+        minLength: 50
+        type: string
+      daily_rate:
+        example: 5000
+        maximum: 500000
+        minimum: 0
+        type: integer
+      experience_years:
+        example: 8
+        maximum: 60
+        minimum: 0
+        type: integer
+      headline:
+        example: Licensed Sundarbans & Old Dhaka guide
+        maxLength: 120
+        minLength: 10
+        type: string
+      hourly_rate:
+        example: 800
+        maximum: 100000
+        minimum: 0
+        type: integer
+      languages:
+        example:
+        - bn
+        - en
+        - hi
+        items:
+          type: string
+        maxItems: 10
+        minItems: 1
+        type: array
+        uniqueItems: true
+      license_number:
+        example: BTB-2021-0457
+        maxLength: 50
+        type: string
+      max_group_size:
+        example: 8
+        maximum: 100
+        minimum: 1
+        type: integer
+      service_areas:
+        example:
+        - dhaka
+        - sundarbans
+        - khulna
+        items:
+          type: string
+        maxItems: 20
+        minItems: 1
+        type: array
+        uniqueItems: true
+      specialties:
+        example:
+        - nature_wildlife
+        - river_cruise
+        items:
+          type: string
+        maxItems: 15
+        type: array
+        uniqueItems: true
+    required:
+    - about
+    - headline
+    - languages
+    - max_group_size
+    - service_areas
+    type: object
+  dto.VerificationStatusResponse:
+    properties:
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d11
+        type: string
+      nid_last4:
+        example: "4821"
+        type: string
+      rejection_reason:
+        example: NID photo is blurry
+        type: string
+      reviewed_at:
+        type: string
+      status:
+        enum:
+        - pending
+        - approved
+        - rejected
+        example: rejected
+        type: string
+      submitted_at:
+        type: string
+    type: object
+  dto.VerificationTicketResponse:
+    properties:
+      expires_in_seconds:
+        example: 1800
+        type: integer
+      token:
+        example: q4Zr8...registration-token
+        type: string
+    type: object
+  http.APIVersion:
+    properties:
+      base_path:
+        example: /api/v1
+        type: string
+      docs:
+        example: /swagger/index.html
+        type: string
+      released_at:
+        example: "2026-11-21"
+        type: string
+      status:
+        enum:
+        - stable
+        - beta
+        - deprecated
+        example: stable
+        type: string
+      sunset_at:
+        description: set when a version is deprecated
+        type: string
+      version:
+        example: v1
+        type: string
+    type: object
+  http.BuildInfo:
+    properties:
+      build_time:
+        example: "2026-11-21T06:00:00Z"
+        type: string
+      commit:
+        example: a1b2c3d
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
+  http.VersionInfo:
+    properties:
+      api_version:
+        example: v1
+        type: string
+      build:
+        $ref: '#/definitions/http.BuildInfo'
+      environment:
+        example: development
+        type: string
+      name:
+        example: CholoBangladesh API
+        type: string
+      server_time:
+        type: string
+      versions:
+        items:
+          $ref: '#/definitions/http.APIVersion'
+        type: array
+    type: object
+  response.Body:
+    properties:
+      data: {}
+      error:
+        $ref: '#/definitions/response.ErrorBody'
+      message:
+        example: ok
+        type: string
+      request_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  response.ErrorBody:
+    properties:
+      code:
+        example: VALIDATION_ERROR
+        type: string
+      details: {}
+      retry_after_seconds:
+        example: 60
+        type: integer
+    type: object
+  response.ErrorResponse:
+    properties:
+      error:
+        $ref: '#/definitions/response.ErrorBody'
+      message:
+        example: some fields are invalid
+        type: string
+      request_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+info:
+  contact:
+    name: CholoBangladesh Backend
+  description: |
+    Backend API for **CholoBangladesh**, a tourist platform where travellers find and book verified local guides.
+
+    ## Roles
+    | Role | Who | How they sign up |
+    |---|---|---|
+    | `user` | Tourist (foreign or local) | **Email OTP** (3 steps), or **Google / Apple** (1 step). No phone needed and no SMS cost. |
+    | `guide` | Local guide | **Bangladeshi mobile OTP** (3 steps), then profile + **NID/selfie KYC**, which an admin approves |
+    | `admin` | Platform staff | Created from the `ADMIN_EMAIL` / `ADMIN_PASSWORD` env vars |
+
+    ## Response envelope (every endpoint)
+    ```json
+    // success
+    { "success": true,  "message": "logged in", "data": { ... }, "request_id": "..." }
+    // error
+    { "success": false, "message": "human readable", "error": { "code": "OTP_INVALID", "details": { "remaining_attempts": 3 }, "retry_after_seconds": 60 }, "request_id": "..." }
+    ```
+    * Base your UI logic on **`error.code`**, because it never changes. Show `message` to users.
+    * `VALIDATION_ERROR` (422) → `error.details` is `[{ "field": "password", "rule": "strong_password", "message": "..." }]`. Show each message next to its form field.
+    * On **429**, read `retry_after_seconds` (also the `Retry-After` header) and show a countdown.
+    * Send `request_id` with bug reports.
+
+    ## Tourist sign-up flow
+    1. `POST /auth/register/user/send-otp` `{email}` → show the OTP screen with a resend timer (`resend_after_seconds`)
+    2. `POST /auth/register/user/verify-otp` `{email, otp}` → keep `data.token` in memory
+    3. `POST /auth/register/user/complete` `{registration_token, full_name, password?, country_code?}` → **logged in**
+    4. If `user.onboarding.next_step == "complete_profile"` → `PATCH /users/me/profile` (`country_code` is required)
+
+    **Google / Apple:** `POST /auth/oauth/google` or `/auth/oauth/apple` with `{id_token}` → **logged in** (`is_new_user` tells you whether to show the welcome or onboarding screens).
+
+    ## Guide sign-up flow
+    1. `POST /auth/register/guide/send-otp` `{phone: "01712345678"}`
+    2. `POST /auth/register/guide/verify-otp` `{phone, otp}` → `data.token`
+    3. `POST /auth/register/guide/complete` `{registration_token, full_name, password}` → **logged in**
+    4. `PATCH /users/me/profile` (`date_of_birth`, `city`, ...) and `PUT /users/me/avatar`
+    5. `PUT /guides/me/profile` (headline, about, languages, service areas, rate)
+    6. `POST /guides/me/verification` (multipart: `nid_number`, `nid_front`, `nid_back`, `selfie`)
+    7. Admin approves → `verification_status = approved` → the guide appears in `GET /guides`
+
+    Use **`user.onboarding.next_step`** to route screens:
+    `complete_profile` → `submit_verification` → `awaiting_review` → (`resubmit_verification`) → `done`.
+    `onboarding.missing_fields` lists exactly which fields are missing.
+
+    ## Tokens
+    * `access_token` is a JWT that expires in `expires_in_seconds` (default 15 min). Send it as `Authorization: Bearer <token>`.
+    * `refresh_token` is opaque and lasts 30 days. **It rotates on every refresh**, so always save the new one.
+    * Web clients should keep the refresh token in memory or secure storage, never in `localStorage` if you can avoid it. Mobile clients should use Keychain or Keystore.
+    * 401 `TOKEN_INVALID` → call `POST /auth/token/refresh` once, then retry. 401 `REFRESH_TOKEN_INVALID` or `SESSION_REVOKED` → go to login.
+    * 409 `REFRESH_TOKEN_ROTATED` → another tab already refreshed. Re-read the stored token and retry.
+
+    ## Security (what the frontend will notice)
+    * **Rate limits** are enforced per IP (global, auth, OTP send) and per user (uploads). A request over the limit gets 429 `RATE_LIMITED`.
+    * **OTP:** each code is valid for 5 minutes and can be used once. You can request a new code after 60 seconds, up to 5 per hour per email or phone. After 5 wrong attempts that email or phone is blocked for `USER_BLOCK_TIME`.
+    * **Login lockout:** after `USER_MAX_FAILED_ATTEMPTS` wrong passwords, the account gets `ACCOUNT_TEMPORARILY_LOCKED` for `USER_BLOCK_TIME`.
+    * **Captcha:** when enabled, send a Cloudflare Turnstile token in the `X-Captcha-Token` header on send-otp, login and forgot-password requests.
+    * Forgot-password and OTP-login return the same response whether or not the account exists.
+  title: CholoBangladesh API
+  version: "1.0"
+paths:
+  /:
+    get:
+      description: |-
+        Current API version, build (version, git commit, build time) and all available versions.
+        Every response also carries an `X-API-Version` header. Deprecated versions add
+        `Deprecation: true` and `Sunset: <date>` headers. Use it to check the server is up.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/http.VersionInfo'
+              type: object
+      summary: API version info
+      tags:
+      - 0. Meta
+  /admin/guide-verifications:
+    get:
+      description: 'Oldest first. Default: all statuses; use `status=pending` for
+        the queue.'
+      parameters:
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - enum:
+        - pending
+        - approved
+        - rejected
+        example: pending
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AdminVerificationPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Guide KYC review queue
+      tags:
+      - 8. Admin
+  /admin/guide-verifications/{id}:
+    get:
+      description: Document URLs expire after 10 minutes. Every view is written to
+        the audit log.
+      parameters:
+      - description: Verification ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AdminVerificationDetailResponse'
+              type: object
+        "404":
+          description: VERIFICATION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: KYC detail (decrypted NID + signed document URLs)
+      tags:
+      - 8. Admin
+  /admin/guide-verifications/{id}/approve:
+    post:
+      parameters:
+      - description: Verification ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "409":
+          description: VERIFICATION_ALREADY_REVIEWED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Approve a guide (profile goes live)
+      tags:
+      - 8. Admin
+  /admin/guide-verifications/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: The reason is shown to the guide, who can fix it and resubmit.
+      parameters:
+      - description: Verification ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reason
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RejectVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "409":
+          description: VERIFICATION_ALREADY_REVIEWED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reject a guide verification
+      tags:
+      - 8. Admin
+  /admin/users:
+    get:
+      parameters:
+      - example: 20
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - example: rahim
+        in: query
+        maxLength: 100
+        name: q
+        type: string
+      - enum:
+        - user
+        - guide
+        - admin
+        example: guide
+        in: query
+        name: role
+        type: string
+      - enum:
+        - active
+        - suspended
+        - deleted
+        example: active
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AdminUserPage'
+              type: object
+        "403":
+          description: FORBIDDEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - 8. Admin
+  /admin/users/{id}:
+    get:
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "404":
+          description: USER_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a user
+      tags:
+      - 8. Admin
+  /admin/users/{id}/status:
+    patch:
+      consumes:
+      - application/json
+      description: Suspending signs the user out of every device immediately.
+      parameters:
+      - description: User ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "403":
+          description: CANNOT_MODIFY_ADMIN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Suspend / re-activate a user
+      tags:
+      - 8. Admin
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        `identifier` = email (tourists) or BD mobile (guides). Wrong password returns
+        `INVALID_CREDENTIALS` with `details.remaining_attempts`. After USER_MAX_FAILED_ATTEMPTS
+        failures within USER_FAILED_ATTEMPT_WINDOW the account is locked for USER_BLOCK_TIME
+        (`ACCOUNT_TEMPORARILY_LOCKED`, 429 + `retry_after_seconds`). Response time is identical
+        whether or not the account exists.
+      parameters:
+      - description: Cloudflare Turnstile token (when CAPTCHA_ENABLED)
+        in: header
+        name: X-Captcha-Token
+        type: string
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "401":
+          description: INVALID_CREDENTIALS
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: ACCOUNT_SUSPENDED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: ACCOUNT_TEMPORARILY_LOCKED | RATE_LIMITED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Login with email/phone + password
+      tags:
+      - 3. Auth · Login & session
+  /auth/login/otp/send:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Sends a code to a verified email (tourist) or BD phone (guide). Always returns the same
+        response whether or not the account exists (prevents account enumeration).
+      parameters:
+      - description: Cloudflare Turnstile token (when CAPTCHA_ENABLED)
+        in: header
+        name: X-Captcha-Token
+        type: string
+      - description: Email or BD phone
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.IdentifierRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OTPSentResponse'
+              type: object
+        "429":
+          description: OTP_COOLDOWN | OTP_LIMIT_REACHED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Passwordless login · Step 1 — send OTP
+      tags:
+      - 3. Auth · Login & session
+  /auth/login/otp/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Identifier + OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.IdentifierOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "400":
+          description: OTP_INVALID | OTP_EXPIRED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "403":
+          description: ACCOUNT_SUSPENDED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: ACCOUNT_TEMPORARILY_LOCKED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Passwordless login · Step 2 — verify OTP and log in
+      tags:
+      - 3. Auth · Login & session
+  /auth/logout:
+    post:
+      description: Revokes the current session; the access token stops working immediately.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout this device
+      tags:
+      - 3. Auth · Login & session
+  /auth/logout-all:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Logout from all devices
+      tags:
+      - 3. Auth · Login & session
+  /auth/oauth/apple:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Send the `id_token` (identityToken) from Sign in with Apple. Apple gives the user's name to the
+        client only on the first sign-in — forward it in `full_name`. Supports private relay emails.
+      parameters:
+      - description: Apple identity token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.OAuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "401":
+          description: OAUTH_TOKEN_INVALID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: OAUTH_PROVIDER_DISABLED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Sign in with Apple (tourists)
+      tags:
+      - 3. Auth · Login & session
+  /auth/oauth/google:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Send the `id_token` (credential) from Google Identity Services (web) or Google Sign-In (mobile).
+        Creates a tourist account on first use (`is_new_user: true`) or links to an existing account
+        with the same verified email. The token audience must be one of GOOGLE_CLIENT_IDS.
+      parameters:
+      - description: Google ID token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.OAuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "401":
+          description: OAUTH_TOKEN_INVALID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: OAUTH_EMAIL_UNVERIFIED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: OAUTH_PROVIDER_DISABLED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Sign in with Google (tourists)
+      tags:
+      - 3. Auth · Login & session
+  /auth/password/forgot:
+    post:
+      consumes:
+      - application/json
+      description: Sends a code to the verified email/phone. Same response whether
+        or not the account exists.
+      parameters:
+      - description: Cloudflare Turnstile token (when CAPTCHA_ENABLED)
+        in: header
+        name: X-Captcha-Token
+        type: string
+      - description: Email or BD phone
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.IdentifierRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OTPSentResponse'
+              type: object
+        "429":
+          description: OTP_COOLDOWN | OTP_LIMIT_REACHED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Forgot password · Step 1 — send reset OTP
+      tags:
+      - 4. Auth · Password reset
+  /auth/password/reset:
+    post:
+      consumes:
+      - application/json
+      description: Sets the new password, signs out every device and clears any login
+        lock. Then log in again.
+      parameters:
+      - description: Reset token + new password
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ResetPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "400":
+          description: VERIFICATION_TOKEN_INVALID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Forgot password · Step 3 — set new password
+      tags:
+      - 4. Auth · Password reset
+  /auth/password/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: '`token` is valid for USER_PASSWORD_RESET_TOKEN_EXPIRE_IN and can
+        be used once.'
+      parameters:
+      - description: Identifier + OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.IdentifierOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.VerificationTicketResponse'
+              type: object
+        "400":
+          description: OTP_INVALID | OTP_EXPIRED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: ACCOUNT_TEMPORARILY_LOCKED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Forgot password · Step 2 — verify OTP, get reset_token
+      tags:
+      - 4. Auth · Password reset
+  /auth/register/guide/complete:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Creates the guide account (verification_status = `unverified`) and logs in.
+        Next steps (see `user.onboarding`): PATCH /users/me/profile + PUT /users/me/avatar →
+        PUT /guides/me/profile → POST /guides/me/verification → admin approval → profile goes live.
+      parameters:
+      - description: Account details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CompleteGuideRegistrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "400":
+          description: VERIFICATION_TOKEN_INVALID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: PHONE_ALREADY_REGISTERED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Guide sign-up · Step 3 — create guide account
+      tags:
+      - 2. Auth · Guide sign-up
+  /auth/register/guide/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Accepts `01XXXXXXXXX`, `8801XXXXXXXXX` or `+8801XXXXXXXXX`. Only BD mobile operators are
+        allowed (prevents international SMS fraud). Also limited to SMS_MAX_PER_IP_PER_DAY per IP.
+      parameters:
+      - description: Cloudflare Turnstile token (when CAPTCHA_ENABLED)
+        in: header
+        name: X-Captcha-Token
+        type: string
+      - description: BD mobile number
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PhoneOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OTPSentResponse'
+              type: object
+        "409":
+          description: PHONE_ALREADY_REGISTERED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: OTP_COOLDOWN | OTP_LIMIT_REACHED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: OTP_DELIVERY_FAILED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Guide sign-up · Step 1 — send SMS OTP (Bangladeshi numbers only)
+      tags:
+      - 2. Auth · Guide sign-up
+  /auth/register/guide/verify-otp:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Phone + OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PhoneOTPVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.VerificationTicketResponse'
+              type: object
+        "400":
+          description: OTP_INVALID | OTP_EXPIRED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: ACCOUNT_TEMPORARILY_LOCKED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Guide sign-up · Step 2 — verify SMS OTP
+      tags:
+      - 2. Auth · Guide sign-up
+  /auth/register/user/complete:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Creates the tourist account and logs in (returns tokens). `password` is optional: without
+        it the tourist signs in with email OTP or Google/Apple. Then follow `user.onboarding.next_step`.
+      parameters:
+      - description: Account details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CompleteUserRegistrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "400":
+          description: VERIFICATION_TOKEN_INVALID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: EMAIL_ALREADY_REGISTERED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Tourist sign-up · Step 3 — create account
+      tags:
+      - 1. Auth · Tourist sign-up
+  /auth/register/user/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Sends a 6-digit code to the email. Fails with `EMAIL_ALREADY_REGISTERED` (409) if the email
+        already has an account (send the user to login). Re-sending is allowed after
+        `resend_after_seconds`; otherwise `OTP_COOLDOWN` (429, see `retry_after_seconds`).
+        Requires `X-Captcha-Token` header when captcha is enabled.
+      parameters:
+      - description: Cloudflare Turnstile token (when CAPTCHA_ENABLED)
+        in: header
+        name: X-Captcha-Token
+        type: string
+      - description: Email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EmailOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OTPSentResponse'
+              type: object
+        "409":
+          description: EMAIL_ALREADY_REGISTERED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: OTP_COOLDOWN | OTP_LIMIT_REACHED | RATE_LIMITED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: OTP_DELIVERY_FAILED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Tourist sign-up · Step 1 — send email OTP
+      tags:
+      - 1. Auth · Tourist sign-up
+  /auth/register/user/verify-otp:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Returns a single-use `token` (registration_token) valid for USER_REGISTRATION_TOKEN_EXPIRE_IN.
+        Keep it in memory and send it with step 3. Wrong codes return `OTP_INVALID` with
+        `details.remaining_attempts`; after OTP_MAX_ATTEMPTS the email is blocked for USER_BLOCK_TIME
+        (`ACCOUNT_TEMPORARILY_LOCKED`, 429).
+      parameters:
+      - description: Email + OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EmailOTPVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.VerificationTicketResponse'
+              type: object
+        "400":
+          description: OTP_INVALID | OTP_EXPIRED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: ACCOUNT_TEMPORARILY_LOCKED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Tourist sign-up · Step 2 — verify email OTP
+      tags:
+      - 1. Auth · Tourist sign-up
+  /auth/token/refresh:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Call when an API returns 401 `TOKEN_INVALID`, or shortly before `expires_in_seconds`.
+        The old refresh token becomes invalid — always store the new one. Re-using an old refresh
+        token (theft) revokes the session. If two tabs refresh at once, the loser gets
+        `REFRESH_TOKEN_ROTATED` (409): re-read the newest token from storage and retry.
+      parameters:
+      - description: Refresh token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "401":
+          description: REFRESH_TOKEN_INVALID → redirect to login
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: REFRESH_TOKEN_ROTATED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Refresh access token (rotates refresh token)
+      tags:
+      - 3. Auth · Login & session
+  /guides:
+    get:
+      description: Only approved, active and available guides are listed. Contact
+        info is never exposed.
+      parameters:
+      - example: sylhet
+        in: query
+        maxLength: 60
+        name: area
+        type: string
+      - example: en
+        in: query
+        name: language
+        type: string
+      - example: 20
+        in: query
+        maximum: 50
+        minimum: 1
+        name: limit
+        type: integer
+      - example: 2000
+        in: query
+        minimum: 0
+        name: max_rate
+        type: integer
+      - example: 300
+        in: query
+        minimum: 0
+        name: min_rate
+        type: integer
+      - example: 1
+        in: query
+        maximum: 1000
+        minimum: 1
+        name: page
+        type: integer
+      - example: rahim
+        in: query
+        maxLength: 100
+        name: q
+        type: string
+      - enum:
+        - rating
+        - experience
+        - price_low
+        - price_high
+        - newest
+        example: rating
+        in: query
+        name: sort
+        type: string
+      - example: tea_garden
+        in: query
+        maxLength: 40
+        name: specialty
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GuidePage'
+              type: object
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Browse verified guides (public)
+      tags:
+      - 7. Guides · Public
+  /guides/{id}:
+    get:
+      parameters:
+      - description: Guide user ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PublicGuideResponse'
+              type: object
+        "404":
+          description: GUIDE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Public guide profile
+      tags:
+      - 7. Guides · Public
+  /guides/me/availability:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Availability
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AvailabilityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Toggle availability (hide/show in search)
+      tags:
+      - 6. Guide · My guide profile & KYC
+  /guides/me/profile:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Full replace (PUT). Either `hourly_rate` or `daily_rate` is required (BDT, whole taka).
+        `languages`: ISO 639-1 codes (bn, en, hi...). `service_areas`: lowercase slugs (dhaka, sylhet,
+        coxs-bazar...). `specialties`: see GET /guides/options.
+      parameters:
+      - description: Guide profile
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpsertGuideProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "403":
+          description: FORBIDDEN (not a guide)
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create / replace my guide profile
+      tags:
+      - 6. Guide · My guide profile & KYC
+  /guides/me/verification:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.VerificationStatusResponse'
+              type: object
+        "404":
+          description: VERIFICATION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Latest verification status
+      tags:
+      - 6. Guide · My guide profile & KYC
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        multipart/form-data. Allowed only when `onboarding.next_step` is `submit_verification` or
+        `resubmit_verification` (profile must be complete, see `GUIDE_PROFILE_INCOMPLETE.details`).
+        Images: JPEG/PNG/WEBP, max MAX_UPLOAD_SIZE_MB each, min 300x300. Documents are stored privately
+        (never public URLs) and the NID number is encrypted (AES-256-GCM). An admin reviews it;
+        the guide gets an SMS with the result.
+      parameters:
+      - description: NID number (10, 13 or 17 digits)
+        in: formData
+        name: nid_number
+        required: true
+        type: string
+      - description: Front side of NID
+        in: formData
+        name: nid_front
+        required: true
+        type: file
+      - description: Back side of NID
+        in: formData
+        name: nid_back
+        required: true
+        type: file
+      - description: Selfie holding the NID
+        in: formData
+        name: selfie
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.VerificationStatusResponse'
+              type: object
+        "409":
+          description: VERIFICATION_PENDING | ALREADY_VERIFIED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: GUIDE_PROFILE_INCOMPLETE | VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: UPLOAD_UNAVAILABLE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit identity verification (NID + selfie)
+      tags:
+      - 6. Guide · My guide profile & KYC
+  /guides/options:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GuideOptionsResponse'
+              type: object
+      summary: Allowed values for guide filters/forms
+      tags:
+      - 7. Guides · Public
+  /users/me:
+    delete:
+      consumes:
+      - application/json
+      description: |-
+        Soft-deletes the account and signs out everywhere. `confirm` must be "DELETE";
+        `password` is required when the account has one.
+      parameters:
+      - description: Confirmation
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.DeleteAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: WRONG_PASSWORD
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: PASSWORD_REQUIRED | VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete my account
+      tags:
+      - 5. Me · Profile & account
+    get:
+      description: |-
+        Full private profile. Use `onboarding.next_step` to route the user to the right screen
+        after login (complete_profile | submit_verification | awaiting_review | resubmit_verification | done).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "401":
+          description: UNAUTHORIZED | TOKEN_INVALID | SESSION_REVOKED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get my account
+      tags:
+      - 5. Me · Profile & account
+  /users/me/avatar:
+    delete:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Remove profile photo
+      tags:
+      - 5. Me · Profile & account
+    put:
+      consumes:
+      - multipart/form-data
+      description: |-
+        multipart/form-data with field `avatar`. JPEG, PNG or WEBP, max MAX_UPLOAD_SIZE_MB, min 100x100.
+        The file type is detected from its content, not its name.
+      parameters:
+      - description: Image file
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "413":
+          description: PAYLOAD_TOO_LARGE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: INVALID_IMAGE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: UPLOAD_UNAVAILABLE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload / replace profile photo
+      tags:
+      - 5. Me · Profile & account
+  /users/me/contacts/email/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: Lets guides (who signed up with phone) add an email, or anyone
+        change their email.
+      parameters:
+      - description: New email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EmailOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OTPSentResponse'
+              type: object
+        "409":
+          description: EMAIL_ALREADY_REGISTERED | CONTACT_ALREADY_VERIFIED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add / change email · Step 1 — send OTP
+      tags:
+      - 5. Me · Profile & account
+  /users/me/contacts/email/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email + OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.EmailOTPVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "400":
+          description: OTP_INVALID | OTP_EXPIRED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add / change email · Step 2 — verify OTP
+      tags:
+      - 5. Me · Profile & account
+  /users/me/contacts/phone/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Optional for tourists (international numbers are not SMS-verified — use `whatsapp_number`
+        in the profile instead). Guides can change their phone number here.
+      parameters:
+      - description: New BD phone
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PhoneOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OTPSentResponse'
+              type: object
+        "409":
+          description: PHONE_ALREADY_REGISTERED | CONTACT_ALREADY_VERIFIED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add / change BD phone · Step 1 — send SMS OTP
+      tags:
+      - 5. Me · Profile & account
+  /users/me/contacts/phone/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Phone + OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PhoneOTPVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "400":
+          description: OTP_INVALID | OTP_EXPIRED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Add / change BD phone · Step 2 — verify OTP
+      tags:
+      - 5. Me · Profile & account
+  /users/me/password:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        `current_password` is required when `has_password` is true. Google/Apple-only accounts can
+        set a first password without it. All other devices are signed out.
+      parameters:
+      - description: Passwords
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "401":
+          description: WRONG_PASSWORD
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "422":
+          description: VALIDATION_ERROR | PASSWORD_UNCHANGED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: ACCOUNT_TEMPORARILY_LOCKED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Change (or set first) password
+      tags:
+      - 5. Me · Profile & account
+  /users/me/profile:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        PATCH semantics — send only the fields that changed. Empty string clears an optional field.
+        Tourists must set `country_code` to finish onboarding. Guides must set `date_of_birth`
+        (18+), `city` and an avatar. A verified guide cannot change `date_of_birth`.
+      parameters:
+      - description: Fields to update
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MeResponse'
+              type: object
+        "422":
+          description: VALIDATION_ERROR | UNDERAGE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update my personal profile (partial)
+      tags:
+      - 5. Me · Profile & account
+  /users/me/sessions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.SessionResponse'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List my logged-in devices
+      tags:
+      - 5. Me · Profile & account
+  /users/me/sessions/{id}:
+    delete:
+      parameters:
+      - description: Session ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+        "404":
+          description: SESSION_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Sign out a specific device
+      tags:
+      - 5. Me · Profile & account
+schemes:
+- http
+- https
+securityDefinitions:
+  BearerAuth:
+    description: 'Type: **Bearer &lt;access_token&gt;** (from login / register / refresh)'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
