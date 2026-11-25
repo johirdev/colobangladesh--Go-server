@@ -1,7 +1,11 @@
 // Package dto holds the request/response contracts of the geo module.
 package dto
 
-import "cholobangladesh-server/pkg/response"
+import (
+	"cholobangladesh-server/pkg/response"
+
+	"cholobangladesh-server/pkg/listing"
+)
 
 // ------------------------------------------------------------------ requests
 
@@ -67,13 +71,12 @@ type DistrictQuery struct {
 	Q          string `form:"q" binding:"omitempty,max=80" example:"cox"`
 }
 
+// UpazilaQuery — ?page ?limit (100, max 600) ?q (name, বাংলা name) ?sort=name|district|newest.
 type UpazilaQuery struct {
+	listing.Params
 	DistrictID int    `form:"district_id" binding:"omitempty,gte=1" example:"9"`
 	DivisionID int    `form:"division_id" binding:"omitempty,gte=1" example:"1"`
 	Type       string `form:"type" binding:"omitempty,oneof=upazila metro_thana" example:"upazila"`
-	Q          string `form:"q" binding:"omitempty,max=80" example:"tek"`
-	Page       int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit      int    `form:"limit" binding:"omitempty,gte=1,lte=600" example:"100"`
 }
 
 // ------------------------------------------------------------------ responses

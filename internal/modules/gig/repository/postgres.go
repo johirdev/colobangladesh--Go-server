@@ -8,6 +8,7 @@ import (
 
 	"cholobangladesh-server/internal/modules/gig/domain"
 	"cholobangladesh-server/internal/shared/web"
+	"cholobangladesh-server/pkg/listing"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -110,7 +111,7 @@ func (r *postgres) SoftDelete(ctx context.Context, id uuid.UUID) error {
 
 func (r *postgres) withRefs(q *gorm.DB) *gorm.DB {
 	return q.Preload("Spot", func(db *gorm.DB) *gorm.DB { return db.Unscoped() }).Preload("Spot.District").
-		Preload("Profile").Preload("Guide")
+		Preload("Profile").Preload("Guide").Preload("Images", orderedImages)
 }
 
 func (r *postgres) Get(ctx context.Context, id uuid.UUID) (*domain.Gig, error) {
@@ -139,65 +140,38 @@ func (r *postgres) ListByGuide(ctx context.Context, guideID uuid.UUID) ([]domain
 	return out, err
 }
 
-var sorts = map[string]string{
-	"rating":     "guide_gigs.rating_avg DESC, guide_gigs.rating_count DESC",
-	"price_low":  "guide_gigs.price ASC",
-	"price_high": "guide_gigs.price DESC",
-	"newest":     "guide_gigs.created_at DESC",
-	"popular":    "guide_gigs.completed_count DESC, guide_gigs.rating_avg DESC",
+// ListSpec: ?sort= values and the columns ?q= searches.
+var ListSpec = listing.Spec{
+	Sorts: map[string]string{
+		"rating":     "guide_gigs.rating_avg DESC, guide_gigs.rating_count DESC",
+		"price_low":  "guide_gigs.price ASC",
+		"price_high": "guide_gigs.price DESC",
+		"newest":     "guide_gigs.created_at DESC",
+		"popular":    "guide_gigs.completed_count DESC, guide_gigs.rating_avg DESC",
+	},
+	DefaultSort: "rating",
+	Tiebreak:    "guide_gigs.id",
+	Search:      []string{"guide_gigs.title"},
 }
 
-func filter(q *gorm.DB, f domain.Filter) *gorm.DB {
-	if f.GuideID != uuid.Nil {
-		q = q.Where("guide_gigs.guide_id = ?", f.GuideID)
-	}
-	if f.SpotID != uuid.Nil {
-		q = q.Where("guide_gigs.spot_id = ?", f.SpotID)
-	}
-	if f.DistrictID > 0 {
-		q = q.Where("guide_gigs.spot_id IN (SELECT id FROM tourist_spots WHERE district_id = ?)", f.DistrictID)
-	}
-	if f.DivisionID > 0 {
-		q = q.Where("guide_gigs.spot_id IN (SELECT id FROM tourist_spots WHERE division_id = ?)", f.DivisionID)
-	}
-	if f.Language != "" {
-		q = q.Where("guide_gigs.languages @> ARRAY[?]::text[]", f.Language)
-	}
-	if f.MinPrice != nil {
-		q = q.Where("guide_gigs.price >= ?", *f.MinPrice)
-	}
-	if f.MaxPrice != nil {
-		q = q.Where("guide_gigs.price <= ?", *f.MaxPrice)
-	}
-	if f.Status != "" {
-		q = q.Where("guide_gigs.status = ?", f.Status)
-	}
-	if f.Query != "" {
-		q = q.Where("guide_gigs.title ILIKE ?", web.Like(f.Query))
-	}
-	return q
+func (r *postgres) list(db *gorm.DB, f domain.Filter) (listing.Result[domain.Gig], error) {
+	q := listing.Filter(db).
+		Eq("guide_gigs.guide_id", f.GuideID).
+		Eq("guide_gigs.spot_id", f.SpotID).
+		Where("guide_gigs.spot_id IN (SELECT id FROM tourist_spots WHERE district_id = ?)", f.DistrictID).
+		Where("guide_gigs.spot_id IN (SELECT id FROM tourist_spots WHERE division_id = ?)", f.DivisionID).
+		Has("guide_gigs.languages", f.Language).
+		Gte("guide_gigs.price", f.MinPrice).
+		Lte("guide_gigs.price", f.MaxPrice).
+		Eq("guide_gigs.status", f.Status)
+	return listing.Find[domain.Gig](q, f.Params, ListSpec, r.withRefs)
 }
 
-func (r *postgres) list(q *gorm.DB, f domain.Filter) ([]domain.Gig, int64, error) {
-	q = filter(q, f)
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	order, ok := sorts[f.Sort]
-	if !ok {
-		order = sorts["rating"]
-	}
-	var out []domain.Gig
-	err := r.withRefs(q).Order(order).Order("guide_gigs.id").Offset((f.Page - 1) * f.Limit).Limit(f.Limit).Find(&out).Error
-	return out, total, err
-}
-
-func (r *postgres) ListPublic(ctx context.Context, f domain.Filter) ([]domain.Gig, int64, error) {
+func (r *postgres) ListPublic(ctx context.Context, f domain.Filter) (listing.Result[domain.Gig], error) {
 	return r.list(bookable(r.q(ctx).Model(&domain.Gig{})), f)
 }
 
-func (r *postgres) ListAll(ctx context.Context, f domain.Filter) ([]domain.Gig, int64, error) {
+func (r *postgres) ListAll(ctx context.Context, f domain.Filter) (listing.Result[domain.Gig], error) {
 	return r.list(r.q(ctx).Model(&domain.Gig{}), f)
 }
 

@@ -61,6 +61,8 @@ func (m *Module) Routes(rg *gin.RouterGroup) {
 	{
 		mg.GET("", h.ManageList)
 		mg.POST("", h.Create)
+		mg.GET("/stats", h.Stats)
+		mg.POST("/bulk", h.Bulk)
 		mg.POST("/autofill", autofillLimit, h.Autofill)
 		mg.GET("/:id", h.ManageGet)
 		mg.PATCH("/:id", h.Update)

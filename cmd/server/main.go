@@ -50,6 +50,10 @@
 //	@tag.description			Star ratings, comments and photos after a completed tour; guide replies.
 //	@tag.name					18. Admin · Marketplace
 //	@tag.description			Admin: gigs, gig quotas, bookings, payment verification, payment numbers, review moderation.
+//	@tag.name					19. Realtime & notifications
+//	@tag.description			Socket.IO ticket (connect to /socket.io/) and the in-app notification inbox.
+//	@tag.name					20. Trip plan & chat
+//	@tag.description			After payment: arrival / pickup / hotel / itinerary plan and tourist ↔ guide messages.
 package main
 
 import (
@@ -71,6 +75,7 @@ import (
 	"cholobangladesh-server/internal/modules/geo"
 	"cholobangladesh-server/internal/modules/gig"
 	"cholobangladesh-server/internal/modules/meta"
+	"cholobangladesh-server/internal/modules/notification"
 	"cholobangladesh-server/internal/modules/review"
 	"cholobangladesh-server/internal/modules/spot"
 	"cholobangladesh-server/internal/modules/user"
@@ -79,6 +84,8 @@ import (
 	"cholobangladesh-server/internal/platform/database"
 	"cholobangladesh-server/internal/platform/mailer"
 	"cholobangladesh-server/internal/platform/oauth"
+	"cholobangladesh-server/internal/platform/payment"
+	"cholobangladesh-server/internal/platform/realtime"
 	"cholobangladesh-server/internal/platform/sms"
 	"cholobangladesh-server/internal/platform/storage"
 	"cholobangladesh-server/internal/shared"
@@ -146,6 +153,18 @@ func run() error {
 		SMS:     sms.New(cfg.SMS),
 		Storage: cld,
 		OAuth:   oauth.NewVerifier(cfg.OAuth.GoogleClientIDs, cfg.OAuth.AppleClientIDs),
+		Notify:  shared.NopNotifier{},
+	}
+
+	// Realtime: Socket.IO server + Redis pub/sub bridge; notifications persist + push through it.
+	notifyModule := notification.New(deps, realtime.NewPublisher(rdb))
+	deps.Notify = notifyModule.Service
+	rt := realtime.NewServer(rdb, cfg.App.CORSOrigins)
+	defer rt.Close()
+
+	gateway, err := payment.New(cfg.Payment)
+	if err != nil {
+		return fmt.Errorf("aamarpay: %w", err)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -170,15 +189,24 @@ func run() error {
 		return err
 	}
 
+	bookingModule := booking.New(deps, gateway)
 	handler, err := apphttp.NewRouter(deps, userModule, metaModule, geoModule, spot.New(deps),
-		gig.New(deps), booking.New(deps), review.New(deps))
+		gig.New(deps), bookingModule, review.New(deps), notifyModule)
 	if err != nil {
 		return err
 	}
+	rt.Run(ctx)
+	bookingModule.Start(ctx)
+	notifyModule.Service.StartCleanup(ctx)
+
+	// /socket.io/ is served outside gin (long-lived connections, own CORS); everything else is the API.
+	mux := http.NewServeMux()
+	mux.Handle(realtime.Path, rt.Handler())
+	mux.Handle("/", handler)
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.App.Port,
-		Handler:           handler,
+		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,

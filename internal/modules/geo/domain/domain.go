@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cholobangladesh-server/pkg/apperror"
+	"cholobangladesh-server/pkg/listing"
 )
 
 type Division struct {
@@ -65,9 +66,7 @@ type UpazilaFilter struct {
 	DistrictID int
 	DivisionID int
 	Type       string
-	Query      string
-	Page       int
-	Limit      int
+	listing.Params
 }
 
 type Repository interface {
@@ -84,7 +83,8 @@ type Repository interface {
 	UpdateDistrict(ctx context.Context, id int, fields map[string]any) error
 	DeleteDistrict(ctx context.Context, id int) error
 
-	ListUpazilas(ctx context.Context, f UpazilaFilter) ([]Upazila, int64, error)
+	ListUpazilas(ctx context.Context, f UpazilaFilter) (listing.Result[Upazila], error)
+	AllUpazilas(ctx context.Context) ([]Upazila, error) // the whole country, for /geo/tree
 	GetUpazila(ctx context.Context, id int) (*Upazila, error)
 	CreateUpazila(ctx context.Context, u *Upazila) error
 	UpdateUpazila(ctx context.Context, id int, fields map[string]any) error

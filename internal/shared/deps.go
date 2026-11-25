@@ -29,6 +29,9 @@ type Deps struct {
 	Storage *storage.Cloudinary // nil when CLOUDINARY_URL is not set
 	OAuth   *oauth.Verifier
 
+	// Notify stores inbox items and pushes live events (set by main; NopNotifier until then).
+	Notify Notifier
+
 	// Sessions validates access tokens against server-side state (revocation,
 	// suspension). Set by main after the user module is built.
 	Sessions middleware.SessionValidator

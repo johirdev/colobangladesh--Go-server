@@ -4,10 +4,10 @@ package repository
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"cholobangladesh-server/internal/modules/user/domain"
+	"cholobangladesh-server/pkg/listing"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -109,31 +109,27 @@ func (r *postgres) AuthState(ctx context.Context, id uuid.UUID) (int, domain.Sta
 	return row.TokenVersion, row.Status, mapErr(err)
 }
 
-func likePattern(s string) string {
-	s = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(strings.TrimSpace(s))
-	return "%" + s + "%"
+// UserSpec: admin user table; ?q= matches email, phone or name.
+var UserSpec = listing.Spec{
+	Sorts: map[string]string{
+		"newest": "users.created_at DESC",
+		"oldest": "users.created_at ASC",
+		"name":   "p.full_name ASC NULLS LAST",
+		"login":  "users.last_login_at DESC NULLS LAST",
+	},
+	DefaultSort: "newest",
+	Tiebreak:    "users.id",
+	Search:      []string{"users.email", "users.phone", "p.full_name"},
 }
 
-func (r *postgres) ListUsers(ctx context.Context, f domain.UserFilter) ([]domain.User, int64, error) {
-	q := r.q(ctx).Model(&domain.User{}).Joins("LEFT JOIN user_profiles p ON p.user_id = users.id")
-	if f.Role != "" {
-		q = q.Where("users.role = ?", f.Role)
-	}
-	if f.Status != "" {
-		q = q.Where("users.status = ?", f.Status)
-	}
-	if f.Query != "" {
-		p := likePattern(f.Query)
-		q = q.Where("(users.email ILIKE ? OR users.phone ILIKE ? OR p.full_name ILIKE ?)", p, p, p)
-	}
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var users []domain.User
-	err := q.Preload("Profile").Preload("GuideProfile").Order("users.created_at DESC").
-		Offset((f.Page - 1) * f.Limit).Limit(f.Limit).Find(&users).Error
-	return users, total, err
+func (r *postgres) ListUsers(ctx context.Context, f domain.UserFilter) (listing.Result[domain.User], error) {
+	q := listing.Filter(r.q(ctx).Model(&domain.User{})).
+		Joins("LEFT JOIN user_profiles p ON p.user_id = users.id").
+		Eq("users.role", f.Role).
+		Eq("users.status", f.Status)
+	return listing.Find[domain.User](q, f.Params, UserSpec, func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Profile").Preload("GuideProfile")
+	})
 }
 
 // ------------------------------------------------------------------ profiles
@@ -148,53 +144,35 @@ func (r *postgres) UpdateGuideProfile(ctx context.Context, userID uuid.UUID, fie
 	return mapErr(r.q(ctx).Model(&domain.GuideProfile{}).Where("user_id = ?", userID).Updates(fields).Error)
 }
 
-var guideSorts = map[string]string{
-	"rating":     "gp.rating_avg DESC, gp.rating_count DESC",
-	"experience": "gp.experience_years DESC",
-	"price_low":  "gp.hourly_rate ASC NULLS LAST",
-	"price_high": "gp.hourly_rate DESC NULLS LAST",
-	"newest":     "gp.verified_at DESC NULLS LAST",
+// GuideSpec: public guide directory (20 per page, max 50); ?q= matches name or headline.
+var GuideSpec = listing.Spec{
+	Sorts: map[string]string{
+		"rating":     "gp.rating_avg DESC, gp.rating_count DESC",
+		"experience": "gp.experience_years DESC",
+		"price_low":  "gp.hourly_rate ASC NULLS LAST",
+		"price_high": "gp.hourly_rate DESC NULLS LAST",
+		"newest":     "gp.verified_at DESC NULLS LAST",
+	},
+	DefaultSort: "rating",
+	Tiebreak:    "users.id",
+	Search:      []string{"p.full_name", "gp.headline"},
+	MaxLimit:    50,
 }
 
-func (r *postgres) SearchGuides(ctx context.Context, f domain.GuideFilter) ([]domain.User, int64, error) {
-	q := r.q(ctx).Model(&domain.User{}).
+func (r *postgres) SearchGuides(ctx context.Context, f domain.GuideFilter) (listing.Result[domain.User], error) {
+	q := listing.Filter(r.q(ctx).Model(&domain.User{})).
 		Joins("JOIN guide_profiles gp ON gp.user_id = users.id").
 		Joins("JOIN user_profiles p ON p.user_id = users.id").
-		Where("users.role = ? AND users.status = ?", domain.RoleGuide, domain.StatusActive).
-		Where("gp.verification_status = ? AND gp.is_available = TRUE", domain.VerificationApproved)
-
-	if f.Area != "" {
-		q = q.Where("gp.service_areas @> ARRAY[?]::text[]", f.Area)
-	}
-	if f.Language != "" {
-		q = q.Where("gp.languages @> ARRAY[?]::text[]", f.Language)
-	}
-	if f.Specialty != "" {
-		q = q.Where("gp.specialties @> ARRAY[?]::text[]", f.Specialty)
-	}
-	if f.MinRate != nil {
-		q = q.Where("gp.hourly_rate >= ?", *f.MinRate)
-	}
-	if f.MaxRate != nil {
-		q = q.Where("gp.hourly_rate <= ?", *f.MaxRate)
-	}
-	if f.Query != "" {
-		p := likePattern(f.Query)
-		q = q.Where("(p.full_name ILIKE ? OR gp.headline ILIKE ?)", p, p)
-	}
-
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	order, ok := guideSorts[f.Sort]
-	if !ok {
-		order = guideSorts["rating"]
-	}
-	var users []domain.User
-	err := q.Preload("Profile").Preload("GuideProfile").Order(order).Order("users.id").
-		Offset((f.Page - 1) * f.Limit).Limit(f.Limit).Find(&users).Error
-	return users, total, err
+		Always("users.role = ? AND users.status = ?", domain.RoleGuide, domain.StatusActive).
+		Always("gp.verification_status = ? AND gp.is_available = TRUE", domain.VerificationApproved).
+		Has("gp.service_areas", f.Area).
+		Has("gp.languages", f.Language).
+		Has("gp.specialties", f.Specialty).
+		Gte("gp.hourly_rate", f.MinRate).
+		Lte("gp.hourly_rate", f.MaxRate)
+	return listing.Find[domain.User](q, f.Params, GuideSpec, func(db *gorm.DB) *gorm.DB {
+		return db.Preload("Profile").Preload("GuideProfile")
+	})
 }
 
 // ------------------------------------------------------------------ identities
@@ -324,19 +302,25 @@ func (r *postgres) FindLatestVerification(ctx context.Context, userID uuid.UUID)
 	return &v, nil
 }
 
-func (r *postgres) ListVerifications(ctx context.Context, f domain.VerificationFilter) ([]domain.GuideVerification, int64, error) {
-	q := r.q(ctx).Model(&domain.GuideVerification{})
-	if f.Status != "" {
-		q = q.Where("status = ?", f.Status)
-	}
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	var out []domain.GuideVerification
-	err := q.Preload("User.Profile").Order("created_at ASC"). // oldest first = fair review queue
-									Offset((f.Page - 1) * f.Limit).Limit(f.Limit).Find(&out).Error
-	return out, total, err
+// VerificationSpec: KYC queue — oldest first by default (fair review order); ?q= matches name or phone.
+var VerificationSpec = listing.Spec{
+	Sorts: map[string]string{
+		"oldest": "guide_verifications.created_at ASC",
+		"newest": "guide_verifications.created_at DESC",
+	},
+	DefaultSort: "oldest",
+	Tiebreak:    "guide_verifications.id",
+	Search: []string{
+		"EXISTS (SELECT 1 FROM user_profiles vp WHERE vp.user_id = guide_verifications.user_id AND vp.full_name ILIKE ?)",
+		"EXISTS (SELECT 1 FROM users vu WHERE vu.id = guide_verifications.user_id AND (vu.phone ILIKE ? OR vu.email ILIKE ?))",
+	},
+}
+
+func (r *postgres) ListVerifications(ctx context.Context, f domain.VerificationFilter) (listing.Result[domain.GuideVerification], error) {
+	q := listing.Filter(r.q(ctx).Model(&domain.GuideVerification{})).Eq("guide_verifications.status", f.Status)
+	return listing.Find[domain.GuideVerification](q, f.Params, VerificationSpec, func(db *gorm.DB) *gorm.DB {
+		return db.Preload("User.Profile")
+	})
 }
 
 func (r *postgres) ReviewVerification(ctx context.Context, id uuid.UUID, status domain.VerificationStatus, reviewer uuid.UUID, reason *string) (bool, error) {

@@ -16,7 +16,9 @@ import (
 	"cholobangladesh-server/internal/platform/autofill"
 	"cholobangladesh-server/internal/seed"
 	"cholobangladesh-server/internal/shared/web"
+	"cholobangladesh-server/pkg/apperror"
 	"cholobangladesh-server/pkg/imageutil"
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 	"cholobangladesh-server/pkg/validation"
 
@@ -41,17 +43,29 @@ func notFound(err error) error { return web.As(err, web.ErrNotFound, domain.ErrS
 // ================================================================== public
 
 func (s *Service) List(ctx context.Context, q dto.SpotQuery, status string) (response.Page[dto.SpotCard], error) {
-	page, limit := web.Paging(q.Page, q.Limit, 20, 100)
-	list, total, err := s.repo.List(ctx, domain.Filter{Status: status, DivisionID: q.DivisionID, DistrictID: q.DistrictID,
-		UpazilaID: q.UpazilaID, Category: q.Category, Featured: q.Featured, Query: q.Q, Sort: q.Sort, Page: page, Limit: limit})
+	return s.list(ctx, q, domain.Filter{Status: status})
+}
+
+// ManageList is the staff listing: any status, the "needs work" filter and photo/video counts.
+func (s *Service) ManageList(ctx context.Context, q dto.ManageSpotQuery) (response.Page[dto.SpotCard], error) {
+	return s.list(ctx, q.SpotQuery, domain.Filter{Status: q.Status, Missing: q.Missing, WithCounts: true})
+}
+
+func (s *Service) list(ctx context.Context, q dto.SpotQuery, f domain.Filter) (response.Page[dto.SpotCard], error) {
+	f.Params, f.DivisionID, f.DistrictID, f.UpazilaID = q.Params, q.DivisionID, q.DistrictID, q.UpazilaID
+	f.Category, f.Featured = q.Category, q.Featured
+	res, err := s.repo.List(ctx, f)
 	if err != nil {
 		return response.Page[dto.SpotCard]{}, err
 	}
-	items := make([]dto.SpotCard, 0, len(list))
-	for i := range list {
-		items = append(items, toCard(&list[i]))
-	}
-	return response.NewPage(items, page, limit, total), nil
+	return listing.Map(res, func(sp *domain.Spot) dto.SpotCard {
+		c := toCard(sp)
+		if f.WithCounts {
+			ic, vc := sp.ImageCount, sp.VideoCount
+			c.ImageCount, c.VideoCount = &ic, &vc
+		}
+		return c
+	}), nil
 }
 
 func (s *Service) Markers(ctx context.Context, q dto.MarkerQuery) ([]dto.MapMarker, error) {
@@ -250,6 +264,86 @@ func (s *Service) Delete(ctx context.Context, id uuid.UUID) error {
 		return domain.ErrSpotHasGigs
 	}
 	return notFound(s.repo.SoftDelete(ctx, id))
+}
+
+// Stats powers the content studio header and the status tabs.
+func (s *Service) Stats(ctx context.Context) (*dto.SpotStats, error) {
+	st, err := s.repo.Stats(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := &dto.SpotStats{Total: st.Total, Published: st.Published, Draft: st.Draft, Archived: st.Archived,
+		Featured: st.Featured, MissingImages: st.MissingImages, MissingCoordinates: st.MissingCoordinates,
+		MissingVideos: st.MissingVideos, WithGigs: st.WithGigs, DistrictsCovered: st.DistrictsCovered,
+		TotalDistricts: st.TotalDistricts, ByCategory: make([]dto.CategoryCount, 0, len(st.ByCategory))}
+	for _, c := range st.ByCategory {
+		out.ByCategory = append(out.ByCategory, dto.CategoryCount{Category: c.Category, Count: c.Count})
+	}
+	return out, nil
+}
+
+// bulkField is the column a bulk action sets, and its value.
+type bulkField struct {
+	col string
+	val any
+}
+
+var bulkFields = map[string]bulkField{
+	"publish":   {"status", domain.StatusPublished},
+	"unpublish": {"status", domain.StatusDraft},
+	"archive":   {"status", domain.StatusArchived},
+	"feature":   {"is_featured", true},
+	"unfeature": {"is_featured", false},
+}
+
+// Bulk applies one action to many spots. Spots that cannot take it are skipped; they never fail the batch.
+func (s *Service) Bulk(ctx context.Context, actor uuid.UUID, req dto.BulkSpotRequest) (*dto.BulkSpotResponse, error) {
+	ids := make([]uuid.UUID, 0, len(req.IDs))
+	for _, raw := range req.IDs {
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			return nil, validation.Field("ids", "uuid", "must be tourist spot IDs")
+		}
+		ids = append(ids, id)
+	}
+	briefs, err := s.repo.Briefs(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	byID := make(map[uuid.UUID]domain.Brief, len(briefs))
+	for _, b := range briefs {
+		byID[b.ID] = b
+	}
+
+	res := &dto.BulkSpotResponse{Action: req.Action, Requested: len(ids), Skipped: []dto.BulkSkipped{}}
+	skip := func(id uuid.UUID, title string, e *apperror.Error) {
+		res.Skipped = append(res.Skipped, dto.BulkSkipped{ID: id.String(), Title: title, Code: e.Code, Message: e.Message})
+	}
+	bf, isUpdate := bulkFields[req.Action]
+	var todo []uuid.UUID
+	for _, id := range ids {
+		b, ok := byID[id]
+		switch {
+		case !ok:
+			skip(id, "", domain.ErrSpotNotFound)
+		case !isUpdate && b.GigCount > 0:
+			skip(id, b.Title, domain.ErrSpotHasGigs)
+		case isUpdate && bf.col == "status" && b.Status == bf.val:
+			res.Unchanged++
+		default:
+			todo = append(todo, id)
+		}
+	}
+
+	if isUpdate {
+		res.Affected, err = s.repo.BulkUpdate(ctx, todo, map[string]any{bf.col: bf.val, "updated_by": actor})
+	} else {
+		res.Affected, err = s.repo.BulkSoftDelete(ctx, todo)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // UploadImages stores photos in Cloudinary and appends them to the gallery.
@@ -488,7 +582,7 @@ func toCard(s *domain.Spot) dto.SpotCard {
 	c := dto.SpotCard{ID: s.ID.String(), Slug: s.Slug, Title: s.Title, BnTitle: s.BnTitle, Subtitle: s.Subtitle,
 		Category: s.Category, LocationName: s.LocationName, CoverImageURL: s.CoverImageURL, Latitude: s.Latitude,
 		Longitude: s.Longitude, RatingAvg: s.RatingAvg, RatingCount: s.RatingCount, GigCount: s.GigCount,
-		IsFeatured: s.IsFeatured, Status: s.Status}
+		IsFeatured: s.IsFeatured, Status: s.Status, CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt}
 	if d := s.Division; d != nil {
 		c.Division = &dto.GeoRef{ID: d.ID, Name: d.Name, BnName: d.BnName, Slug: d.Slug}
 	}
@@ -509,8 +603,7 @@ func toUpazila(u *domain.UpazilaRef) dto.UpazilaRef {
 func toDetail(s *domain.Spot) dto.SpotDetail {
 	d := dto.SpotDetail{SpotCard: toCard(s), Description: s.Description, Highlights: s.Highlights,
 		BestTimeToVisit: s.BestTimeToVisit, GoogleMapURL: s.GoogleMapURL, SourceURL: s.SourceURL,
-		Upazilas: []dto.UpazilaRef{}, Images: []dto.ImageResponse{}, Videos: []dto.VideoResponse{},
-		CreatedAt: s.CreatedAt, UpdatedAt: s.UpdatedAt}
+		Upazilas: []dto.UpazilaRef{}, Images: []dto.ImageResponse{}, Videos: []dto.VideoResponse{}}
 	if d.Highlights == nil {
 		d.Highlights = []string{}
 	}

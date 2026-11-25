@@ -11,6 +11,7 @@ import (
 	"cholobangladesh-server/internal/modules/geo/dto"
 	"cholobangladesh-server/internal/shared/web"
 	"cholobangladesh-server/pkg/apperror"
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 	"cholobangladesh-server/pkg/validation"
 )
@@ -189,17 +190,12 @@ func (s *Service) DeleteDistrict(ctx context.Context, id int) error {
 // ------------------------------------------------------------------ upazilas
 
 func (s *Service) ListUpazilas(ctx context.Context, q dto.UpazilaQuery) (response.Page[dto.UpazilaResponse], error) {
-	page, limit := web.Paging(q.Page, q.Limit, 100, 600)
-	list, total, err := s.repo.ListUpazilas(ctx, domain.UpazilaFilter{DistrictID: q.DistrictID, DivisionID: q.DivisionID,
-		Type: q.Type, Query: q.Q, Page: page, Limit: limit})
+	res, err := s.repo.ListUpazilas(ctx, domain.UpazilaFilter{DistrictID: q.DistrictID, DivisionID: q.DivisionID,
+		Type: q.Type, Params: q.Params})
 	if err != nil {
 		return response.Page[dto.UpazilaResponse]{}, err
 	}
-	out := make([]dto.UpazilaResponse, 0, len(list))
-	for i := range list {
-		out = append(out, toUpazila(&list[i]))
-	}
-	return response.NewPage(out, page, limit, total), nil
+	return listing.Map(res, toUpazila), nil
 }
 
 func (s *Service) GetUpazila(ctx context.Context, id int) (*dto.UpazilaResponse, error) {
@@ -277,7 +273,7 @@ func (s *Service) Tree(ctx context.Context) ([]dto.TreeDivision, error) {
 	if err != nil {
 		return nil, err
 	}
-	ups, _, err := s.repo.ListUpazilas(ctx, domain.UpazilaFilter{Page: 1, Limit: 100000})
+	ups, err := s.repo.AllUpazilas(ctx)
 	if err != nil {
 		return nil, err
 	}

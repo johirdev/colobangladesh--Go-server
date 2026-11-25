@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"cholobangladesh-server/pkg/apperror"
+	"cholobangladesh-server/pkg/listing"
 
 	"github.com/google/uuid"
 )
@@ -78,9 +79,8 @@ type Filter struct {
 	SpotID      uuid.UUID
 	WithPhotos  bool
 	IncludeHide bool // admin only
-	Sort        string
-	Page        int
-	Limit       int
+	Rating      int  // list only: exact star rating (1-5)
+	listing.Params
 }
 
 // Summary is the rating breakdown shown above the review list.
@@ -94,7 +94,7 @@ type Repository interface {
 	Booking(ctx context.Context, id uuid.UUID) (*BookingInfo, error)
 	Create(ctx context.Context, r *Review) error // also inserts images and refreshes ratings
 	Get(ctx context.Context, id uuid.UUID) (*Review, error)
-	List(ctx context.Context, f Filter) ([]Review, int64, error)
+	List(ctx context.Context, f Filter) (listing.Result[Review], error)
 	Summary(ctx context.Context, f Filter) (*Summary, error)
 	Update(ctx context.Context, id uuid.UUID, fields map[string]any) error
 	// RefreshRatings recomputes rating_avg/rating_count for the gig, guide and spot.

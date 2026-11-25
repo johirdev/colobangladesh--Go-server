@@ -7,6 +7,7 @@ import (
 
 	"cholobangladesh-server/internal/modules/geo/domain"
 	"cholobangladesh-server/internal/shared/web"
+	"cholobangladesh-server/pkg/listing"
 
 	"gorm.io/gorm"
 )
@@ -101,29 +102,32 @@ func (r *postgres) DeleteDistrict(ctx context.Context, id int) error {
 
 // ------------------------------------------------------------------ upazilas
 
-func (r *postgres) ListUpazilas(ctx context.Context, f domain.UpazilaFilter) ([]domain.Upazila, int64, error) {
-	q := r.q(ctx).Model(&domain.Upazila{})
-	if f.DistrictID > 0 {
-		q = q.Where("upazilas.district_id = ?", f.DistrictID)
-	}
-	if f.DivisionID > 0 {
-		q = q.Where("upazilas.district_id IN (SELECT id FROM districts WHERE division_id = ?)", f.DivisionID)
-	}
-	if f.Type != "" {
-		q = q.Where("upazilas.type = ?", f.Type)
-	}
-	if f.Query != "" {
-		p := web.Like(f.Query)
-		q = q.Where("(upazilas.name ILIKE ? OR upazilas.bn_name ILIKE ?)", p, p)
-	}
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
+// UpazilaSpec: ?sort= values and the columns ?q= searches (100 per page, max 600).
+var UpazilaSpec = listing.Spec{
+	Sorts: map[string]string{
+		"name":     "upazilas.name ASC",
+		"district": "upazilas.district_id ASC, upazilas.name ASC",
+		"newest":   "upazilas.id DESC",
+	},
+	DefaultSort:  "name",
+	Tiebreak:     "upazilas.id",
+	Search:       []string{"upazilas.name", "upazilas.bn_name", "upazilas.slug"},
+	DefaultLimit: 100,
+	MaxLimit:     600,
+}
+
+func (r *postgres) ListUpazilas(ctx context.Context, f domain.UpazilaFilter) (listing.Result[domain.Upazila], error) {
+	q := listing.Filter(r.q(ctx).Model(&domain.Upazila{})).
+		Eq("upazilas.district_id", f.DistrictID).
+		Where("upazilas.district_id IN (SELECT id FROM districts WHERE division_id = ?)", f.DivisionID).
+		Eq("upazilas.type", f.Type)
+	return listing.Find[domain.Upazila](q, f.Params, UpazilaSpec, func(db *gorm.DB) *gorm.DB { return db.Preload("District") })
+}
+
+func (r *postgres) AllUpazilas(ctx context.Context) ([]domain.Upazila, error) {
 	var out []domain.Upazila
-	err := q.Preload("District").Order("upazilas.name").
-		Offset((f.Page - 1) * f.Limit).Limit(f.Limit).Find(&out).Error
-	return out, total, err
+	err := r.q(ctx).Order("name").Find(&out).Error
+	return out, err
 }
 
 func (r *postgres) GetUpazila(ctx context.Context, id int) (*domain.Upazila, error) {

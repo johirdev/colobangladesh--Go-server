@@ -8,6 +8,7 @@ import (
 
 	"cholobangladesh-server/internal/modules/review/domain"
 	"cholobangladesh-server/internal/shared/web"
+	"cholobangladesh-server/pkg/listing"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -70,25 +71,24 @@ func scope(q *gorm.DB, f domain.Filter) *gorm.DB {
 	return q
 }
 
-var sorts = map[string]string{
-	"newest":  "reviews.created_at DESC",
-	"highest": "reviews.rating DESC, reviews.created_at DESC",
-	"lowest":  "reviews.rating ASC, reviews.created_at DESC",
+// ListSpec: ?sort= values and the columns ?q= searches (10 per page, max 50).
+var ListSpec = listing.Spec{
+	Sorts: map[string]string{
+		"newest":  "reviews.created_at DESC",
+		"oldest":  "reviews.created_at ASC",
+		"highest": "reviews.rating DESC, reviews.created_at DESC",
+		"lowest":  "reviews.rating ASC, reviews.created_at DESC",
+	},
+	DefaultSort:  "newest",
+	Tiebreak:     "reviews.id",
+	Search:       []string{"reviews.comment"},
+	DefaultLimit: 10,
+	MaxLimit:     50,
 }
 
-func (r *postgres) List(ctx context.Context, f domain.Filter) ([]domain.Review, int64, error) {
-	q := scope(r.q(ctx).Model(&domain.Review{}), f)
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	order, ok := sorts[f.Sort]
-	if !ok {
-		order = sorts["newest"]
-	}
-	var out []domain.Review
-	err := withRefs(q).Order(order).Offset((f.Page - 1) * f.Limit).Limit(f.Limit).Find(&out).Error
-	return out, total, err
+func (r *postgres) List(ctx context.Context, f domain.Filter) (listing.Result[domain.Review], error) {
+	q := listing.Filter(scope(r.q(ctx).Model(&domain.Review{}), f)).Eq("reviews.rating", f.Rating)
+	return listing.Find[domain.Review](q, f.Params, ListSpec, withRefs)
 }
 
 func (r *postgres) Summary(ctx context.Context, f domain.Filter) (*domain.Summary, error) {

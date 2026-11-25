@@ -4,6 +4,7 @@ package dto
 import (
 	"time"
 
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 )
 
@@ -24,7 +25,6 @@ type CreateGigRequest struct {
 	AvailableDays      []string `json:"available_days" binding:"omitempty,max=7,unique,dive,oneof=sat sun mon tue wed thu fri" example:"fri,sat"`
 	MeetingPoint       *string  `json:"meeting_point" binding:"omitempty,max=300" example:"Mongla ferry ghat"`
 	CancellationPolicy *string  `json:"cancellation_policy" binding:"omitempty,max=1000" example:"Free cancellation up to 48 hours before the tour."`
-	CoverImageURL      *string  `json:"cover_image_url" binding:"omitempty,url,max=1000" example:""`
 	Status             string   `json:"status" binding:"omitempty,oneof=draft active paused" example:"active"`
 }
 
@@ -42,11 +42,12 @@ type UpdateGigRequest struct {
 	AvailableDays      *[]string `json:"available_days" binding:"omitempty,max=7,unique,dive,oneof=sat sun mon tue wed thu fri"`
 	MeetingPoint       *string   `json:"meeting_point" binding:"omitempty,max=300"`
 	CancellationPolicy *string   `json:"cancellation_policy" binding:"omitempty,max=1000"`
-	CoverImageURL      *string   `json:"cover_image_url" binding:"omitempty,max=1000"`
 	Status             *string   `json:"status" binding:"omitempty,oneof=draft active paused" example:"paused"`
 }
 
+// GigQuery — ?page ?limit ?q (title) ?sort=rating|price_low|price_high|newest|popular (default rating).
 type GigQuery struct {
+	listing.Params
 	SpotID     string `form:"spot_id" binding:"omitempty,uuid" example:""`
 	GuideID    string `form:"guide_id" binding:"omitempty,uuid" example:""`
 	DistrictID int    `form:"district_id" binding:"omitempty,gte=1" example:"28"`
@@ -54,10 +55,6 @@ type GigQuery struct {
 	Language   string `form:"language" binding:"omitempty,lang" example:"en"`
 	MinPrice   *int   `form:"min_price" binding:"omitempty,gte=0" example:"500"`
 	MaxPrice   *int   `form:"max_price" binding:"omitempty,gte=0" example:"10000"`
-	Q          string `form:"q" binding:"omitempty,max=100" example:"boat"`
-	Sort       string `form:"sort" binding:"omitempty,oneof=rating price_low price_high newest popular" example:"rating"`
-	Page       int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit      int    `form:"limit" binding:"omitempty,gte=1,lte=100" example:"20"`
 }
 
 type AdminGigQuery struct {
@@ -105,31 +102,47 @@ type GuideRef struct {
 }
 
 type GigResponse struct {
-	ID                 string    `json:"id" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
-	Title              string    `json:"title" example:"Full-day Sundarbans boat safari"`
-	Description        string    `json:"description"`
-	Price              int       `json:"price" example:"6000"`
-	Currency           string    `json:"currency" example:"BDT"`
-	PricingType        string    `json:"pricing_type" example:"per_group" enums:"per_person,per_group"`
-	DurationHours      float64   `json:"duration_hours" example:"8"`
-	MaxGroupSize       int       `json:"max_group_size" example:"10"`
-	Languages          []string  `json:"languages" example:"bn,en"`
-	Includes           []string  `json:"includes"`
-	Excludes           []string  `json:"excludes"`
-	AvailableDays      []string  `json:"available_days" example:"fri,sat"`
-	MeetingPoint       *string   `json:"meeting_point,omitempty"`
-	CancellationPolicy *string   `json:"cancellation_policy,omitempty"`
-	CoverImageURL      *string   `json:"cover_image_url,omitempty"` // gig cover, falls back to the spot cover
-	Status             string    `json:"status" example:"active" enums:"draft,active,paused,suspended"`
-	SuspendedReason    *string   `json:"suspended_reason,omitempty"`
-	RatingAvg          float64   `json:"rating_avg" example:"4.8"`
-	RatingCount        int       `json:"rating_count" example:"12"`
-	BookingCount       int       `json:"booking_count" example:"20"`
-	CompletedCount     int       `json:"completed_count" example:"15"`
-	Spot               *SpotRef  `json:"spot,omitempty"`
-	Guide              *GuideRef `json:"guide,omitempty"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID                 string          `json:"id" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
+	Title              string          `json:"title" example:"Full-day Sundarbans boat safari"`
+	Description        string          `json:"description"`
+	Price              int             `json:"price" example:"6000"`
+	Currency           string          `json:"currency" example:"BDT"`
+	PricingType        string          `json:"pricing_type" example:"per_group" enums:"per_person,per_group"`
+	DurationHours      float64         `json:"duration_hours" example:"8"`
+	MaxGroupSize       int             `json:"max_group_size" example:"10"`
+	Languages          []string        `json:"languages" example:"bn,en"`
+	Includes           []string        `json:"includes"`
+	Excludes           []string        `json:"excludes"`
+	AvailableDays      []string        `json:"available_days" example:"fri,sat"`
+	MeetingPoint       *string         `json:"meeting_point,omitempty"`
+	CancellationPolicy *string         `json:"cancellation_policy,omitempty"`
+	CoverImageURL      *string         `json:"cover_image_url,omitempty"` // first photo, falls back to the spot cover
+	Images             []ImageResponse `json:"images"`                    // gallery, cover first
+	Status             string          `json:"status" example:"active" enums:"draft,active,paused,suspended"`
+	SuspendedReason    *string         `json:"suspended_reason,omitempty"`
+	RatingAvg          float64         `json:"rating_avg" example:"4.8"`
+	RatingCount        int             `json:"rating_count" example:"12"`
+	BookingCount       int             `json:"booking_count" example:"20"`
+	CompletedCount     int             `json:"completed_count" example:"15"`
+	Spot               *SpotRef        `json:"spot,omitempty"`
+	Guide              *GuideRef       `json:"guide,omitempty"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+}
+
+// ImageResponse is one gallery photo. The first one (cover=true) is the gig cover.
+type ImageResponse struct {
+	ID       string  `json:"id" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
+	URL      string  `json:"url" example:"https://res.cloudinary.com/.../gigs/....webp"`
+	Caption  *string `json:"caption,omitempty" example:"Sunset from the boat"`
+	Uploaded bool    `json:"uploaded" example:"true"` // false = an old external URL
+	Cover    bool    `json:"cover" example:"true"`
+}
+
+// UpdateImageRequest edits a caption ("" clears it) and/or makes the photo the cover.
+type UpdateImageRequest struct {
+	Caption *string `json:"caption" binding:"omitempty,max=300" example:"Sunset from the boat"`
+	Cover   bool    `json:"cover" example:"true"`
 }
 
 // GigPage documents response.Page[GigResponse] for swagger.

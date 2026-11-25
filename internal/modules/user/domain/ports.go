@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"cholobangladesh-server/pkg/listing"
 	"context"
 	"errors"
 	"time"
@@ -17,11 +18,9 @@ var ErrDuplicate = errors.New("duplicate")
 // ---------------------------------------------------------------- persistence
 
 type UserFilter struct {
-	Role   Role
-	Status Status
-	Query  string // email / phone / name contains
-	Page   int
-	Limit  int
+	Role           Role
+	Status         Status
+	listing.Params // q: email / phone / name
 }
 
 type GuideFilter struct {
@@ -30,16 +29,12 @@ type GuideFilter struct {
 	Specialty string
 	MinRate   *int
 	MaxRate   *int
-	Query     string
-	Sort      string // rating | experience | price_low | price_high | newest
-	Page      int
-	Limit     int
+	listing.Params
 }
 
 type VerificationFilter struct {
-	Status VerificationStatus
-	Page   int
-	Limit  int
+	Status         VerificationStatus
+	listing.Params // q: guide name / phone
 }
 
 // Repository is the persistence port. Tx runs fn atomically.
@@ -56,13 +51,13 @@ type Repository interface {
 	UpdateUser(ctx context.Context, id uuid.UUID, fields map[string]any) error
 	BumpTokenVersion(ctx context.Context, id uuid.UUID) (int, error)
 	SoftDeleteUser(ctx context.Context, id uuid.UUID) error
-	ListUsers(ctx context.Context, f UserFilter) ([]User, int64, error)
+	ListUsers(ctx context.Context, f UserFilter) (listing.Result[User], error)
 	AuthState(ctx context.Context, id uuid.UUID) (tokenVersion int, status Status, err error)
 
 	// profiles
 	UpdateProfile(ctx context.Context, userID uuid.UUID, fields map[string]any) error
 	UpdateGuideProfile(ctx context.Context, userID uuid.UUID, fields map[string]any) error
-	SearchGuides(ctx context.Context, f GuideFilter) ([]User, int64, error)
+	SearchGuides(ctx context.Context, f GuideFilter) (listing.Result[User], error)
 
 	// oauth identities
 	FindIdentity(ctx context.Context, provider, subject string) (*AuthIdentity, error)
@@ -86,7 +81,7 @@ type Repository interface {
 	CreateVerification(ctx context.Context, v *GuideVerification) error
 	FindVerificationByID(ctx context.Context, id uuid.UUID) (*GuideVerification, error)
 	FindLatestVerification(ctx context.Context, userID uuid.UUID) (*GuideVerification, error)
-	ListVerifications(ctx context.Context, f VerificationFilter) ([]GuideVerification, int64, error)
+	ListVerifications(ctx context.Context, f VerificationFilter) (listing.Result[GuideVerification], error)
 	ReviewVerification(ctx context.Context, id uuid.UUID, status VerificationStatus, reviewer uuid.UUID, reason *string) (bool, error)
 
 	// audit

@@ -4,17 +4,18 @@ package dto
 import (
 	"time"
 
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 )
 
+// ReviewQuery — ?page ?limit (10, max 50) ?q (comment text) ?sort=newest|oldest|highest|lowest.
 type ReviewQuery struct {
+	listing.Params
 	GigID      string `form:"gig_id" binding:"omitempty,uuid" example:""`
 	GuideID    string `form:"guide_id" binding:"omitempty,uuid" example:""`
 	SpotID     string `form:"spot_id" binding:"omitempty,uuid" example:""`
 	WithPhotos bool   `form:"with_photos" example:"false"`
-	Sort       string `form:"sort" binding:"omitempty,oneof=newest highest lowest" example:"newest"`
-	Page       int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit      int    `form:"limit" binding:"omitempty,gte=1,lte=50" example:"10"`
+	Rating     int    `form:"rating" binding:"omitempty,gte=1,lte=5" example:"5"`
 }
 
 type ReplyRequest struct {

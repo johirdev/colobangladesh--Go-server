@@ -65,18 +65,10 @@ const docTemplate = `{
                 "summary": "All bookings",
                 "parameters": [
                     {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
+                        "type": "string",
+                        "example": "2026-12-01",
+                        "description": "From / To filter by tour dates (bookings overlapping the range). Used by the guide schedule.",
+                        "name": "from",
                         "in": "query"
                     },
                     {
@@ -103,6 +95,12 @@ const docTemplate = `{
                         "example": "pending",
                         "name": "status",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-12-31",
+                        "name": "to",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -122,6 +120,130 @@ const docTemplate = `{
                                     }
                                 }
                             ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/bookings/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "For paid bookings set ` + "`" + `refunded=true` + "`" + ` after refunding in the aamarPay merchant panel.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Cancel any pending/accepted booking (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AdminCancelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/bookings/{id}/complete": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Only for paid bookings after the end date, once an admin has confirmed with the guide.\n` + "`" + `note` + "`" + ` (required) records what was confirmed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Complete a tour on the tourist's behalf (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Note",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.AdminCompleteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookingResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "TOUR_NOT_ENDED | BOOKING_NOT_PAID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
                         }
                     }
                 }
@@ -169,14 +291,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
                         "minimum": 0,
                         "type": "integer",
                         "example": 10000,
@@ -188,33 +302,6 @@ const docTemplate = `{
                         "type": "integer",
                         "example": 500,
                         "name": "min_price",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maxLength": 100,
-                        "type": "string",
-                        "example": "boat",
-                        "name": "q",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "rating",
-                            "price_low",
-                            "price_high",
-                            "newest",
-                            "popular"
-                        ],
-                        "type": "string",
-                        "example": "rating",
-                        "name": "sort",
                         "in": "query"
                     },
                     {
@@ -332,21 +419,6 @@ const docTemplate = `{
                 ],
                 "summary": "Guide KYC review queue",
                 "parameters": [
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
                     {
                         "enum": [
                             "pending",
@@ -779,21 +851,6 @@ const docTemplate = `{
                 "summary": "Payments to verify",
                 "parameters": [
                     {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
                         "enum": [
                             "bkash",
                             "nagad",
@@ -994,29 +1051,11 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 50,
+                        "maximum": 5,
                         "minimum": 1,
                         "type": "integer",
-                        "example": 10,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "newest",
-                            "highest",
-                            "lowest"
-                        ],
-                        "type": "string",
-                        "example": "newest",
-                        "name": "sort",
+                        "example": 5,
+                        "name": "rating",
                         "in": "query"
                     },
                     {
@@ -1112,6 +1151,147 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Every checkout attempt with tourist, guide, gig, booking, amount, gateway ids and status.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Online payments (aamarPay transactions)",
+                "parameters": [
+                    {
+                        "enum": [
+                            "initiated",
+                            "success",
+                            "failed",
+                            "cancelled",
+                            "duplicate"
+                        ],
+                        "type": "string",
+                        "example": "success",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GatewayPaymentPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/transactions/{tran_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Online payment detail with its audit trail (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction ID",
+                        "name": "tran_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GatewayPaymentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/trip-plans": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "18. Admin · Marketplace"
+                ],
+                "summary": "Trip plans monitor (admin)",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "example": true,
+                        "name": "upcoming",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.TripPlanPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/admin/users": {
             "get": {
                 "security": [
@@ -1127,28 +1307,6 @@ const docTemplate = `{
                 ],
                 "summary": "List users",
                 "parameters": [
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maxLength": 100,
-                        "type": "string",
-                        "example": "rahim",
-                        "name": "q",
-                        "in": "query"
-                    },
                     {
                         "enum": [
                             "user",
@@ -2186,6 +2344,179 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/register/user/phone/complete": {
+            "post": {
+                "description": "Creates a tourist account with country = BD and logs in (returns tokens).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "1. Auth · Tourist sign-up"
+                ],
+                "summary": "Bangladeshi tourist sign-up · Step 3 — create account",
+                "parameters": [
+                    {
+                        "description": "Account details",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.CompleteLocalUserRegistrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.AuthResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "VERIFICATION_TOKEN_INVALID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "PHONE_ALREADY_REGISTERED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/user/phone/send-otp": {
+            "post": {
+                "description": "The sign-up screen first asks \"Foreigner or Bangladeshi?\". Foreigners use the email flow\n(/auth/register/user/*); Bangladeshi tourists sign up with their BD mobile number here.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "1. Auth · Tourist sign-up"
+                ],
+                "summary": "Bangladeshi tourist sign-up · Step 1 — send SMS OTP",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cloudflare Turnstile token (when CAPTCHA_ENABLED)",
+                        "name": "X-Captcha-Token",
+                        "in": "header"
+                    },
+                    {
+                        "description": "BD mobile number",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PhoneOTPRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.OTPSentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "PHONE_ALREADY_REGISTERED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "OTP_COOLDOWN | OTP_LIMIT_REACHED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register/user/phone/verify-otp": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "1. Auth · Tourist sign-up"
+                ],
+                "summary": "Bangladeshi tourist sign-up · Step 2 — verify SMS OTP",
+                "parameters": [
+                    {
+                        "description": "Phone + OTP",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.PhoneOTPVerifyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.VerificationTicketResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "OTP_INVALID | OTP_EXPIRED",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/register/user/send-otp": {
             "post": {
                 "description": "Sends a 6-digit code to the email. Fails with ` + "`" + `EMAIL_ALREADY_REGISTERED` + "`" + ` (409) if the email\nalready has an account (send the user to login). Re-sending is allowed after\n` + "`" + `resend_after_seconds` + "`" + `; otherwise ` + "`" + `OTP_COOLDOWN` + "`" + ` (429, see ` + "`" + `retry_after_seconds` + "`" + `).\nRequires ` + "`" + `X-Captcha-Token` + "`" + ` header when captcha is enabled.",
@@ -2451,18 +2782,10 @@ const docTemplate = `{
                 "summary": "Booking requests for my gigs (guide)",
                 "parameters": [
                     {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
+                        "type": "string",
+                        "example": "2026-12-01",
+                        "description": "From / To filter by tour dates (bookings overlapping the range). Used by the guide schedule.",
+                        "name": "from",
                         "in": "query"
                     },
                     {
@@ -2488,6 +2811,12 @@ const docTemplate = `{
                         "type": "string",
                         "example": "pending",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-12-31",
+                        "name": "to",
                         "in": "query"
                     }
                 ],
@@ -2529,18 +2858,10 @@ const docTemplate = `{
                 "summary": "My bookings (tourist)",
                 "parameters": [
                     {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
+                        "type": "string",
+                        "example": "2026-12-01",
+                        "description": "From / To filter by tour dates (bookings overlapping the range). Used by the guide schedule.",
+                        "name": "from",
                         "in": "query"
                     },
                     {
@@ -2566,6 +2887,12 @@ const docTemplate = `{
                         "type": "string",
                         "example": "pending",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-12-31",
+                        "name": "to",
                         "in": "query"
                     }
                 ],
@@ -2703,6 +3030,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Paid bookings can only be cancelled by an admin (POST /admin/bookings/{id}/cancel, with refund).",
                 "consumes": [
                     "application/json"
                 ],
@@ -2712,7 +3040,7 @@ const docTemplate = `{
                 "tags": [
                     "15. Bookings"
                 ],
-                "summary": "Cancel a booking (tourist or guide, while pending/accepted)",
+                "summary": "Cancel a booking (tourist or guide, while pending or accepted-but-unpaid)",
                 "parameters": [
                     {
                         "type": "string",
@@ -2751,7 +3079,7 @@ const docTemplate = `{
                         }
                     },
                     "409": {
-                        "description": "BOOKING_STATUS_CONFLICT",
+                        "description": "BOOKING_STATUS_CONFLICT | PAID_BOOKING_CANCEL",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -2766,14 +3094,17 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Allowed on/after the tour date. Opens payment and review for the tourist.",
+                "description": "Only the tourist can confirm, once the booking is **paid** and on/after the tour start date.\nIf the tourist never confirms, an admin completes it after the end date\n(POST /admin/bookings/{id}/complete) after talking to the guide. Opens the review.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "15. Bookings"
                 ],
-                "summary": "Mark the tour as completed (guide)",
+                "summary": "Confirm the tour is completed (tourist only)",
                 "parameters": [
                     {
                         "type": "string",
@@ -2782,6 +3113,14 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Optional note",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/dto.CompleteRequest"
+                        }
                     }
                 ],
                 "responses": {
@@ -2804,7 +3143,206 @@ const docTemplate = `{
                         }
                     },
                     "409": {
-                        "description": "BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED",
+                        "description": "BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED | BOOKING_NOT_PAID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/messages": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Opens once the booking is paid. Fetching marks the other side's messages as read.\nNew messages arrive live as ` + "`" + `message:new` + "`" + `. Older pages: ` + "`" + `?before=\u003ccreated_at of the oldest\u003e` + "`" + `.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "20. Trip plan \u0026 chat"
+                ],
+                "summary": "Chat messages of a booking (oldest → newest)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "maxLength": 40,
+                        "type": "string",
+                        "example": "2026-12-19T10:00:00Z",
+                        "description": "Before: RFC3339 created_at of the oldest message you have (older page).",
+                        "name": "before",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 50,
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.MessageResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "CHAT_NOT_OPEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "20. Trip plan \u0026 chat"
+                ],
+                "summary": "Send a chat message (tourist or guide of a paid booking)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Message",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.MessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.MessageResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "CHAT_NOT_OPEN",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/pay": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Allowed once the guide accepted (` + "`" + `can_pay` + "`" + `). Returns ` + "`" + `payment_url` + "`" + `: redirect the browser there\n(bKash, Nagad, Rocket, cards…). aamarPay sends the tourist back through\n` + "`" + `/payments/aamarpay/return` + "`" + `, the API verifies the transaction server-to-server and redirects to\n` + "`" + `FRONTEND_URL/account/bookings/{id}?payment=success|failed|cancelled|pending` + "`" + `.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "16. Payments"
+                ],
+                "summary": "Pay online with aamarPay (tourist)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.PayOnlineResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "PAYMENT_NOT_DUE | ALREADY_PAID",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "PAYMENT_GATEWAY_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "PAYMENT_GATEWAY_DISABLED",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -2866,7 +3404,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Only after the tour is completed (` + "`" + `can_pay` + "`" + `). ` + "`" + `amount` + "`" + ` must equal ` + "`" + `total_amount` + "`" + `. The payment stays\n` + "`" + `pending` + "`" + ` until an admin verifies it; then the booking's ` + "`" + `payment_status` + "`" + ` becomes ` + "`" + `paid` + "`" + `.",
+                "description": "Only after the guide accepts (` + "`" + `can_pay` + "`" + `). ` + "`" + `amount` + "`" + ` must equal ` + "`" + `total_amount` + "`" + `. The payment stays\n` + "`" + `pending` + "`" + ` until an admin verifies it; then the booking's ` + "`" + `payment_status` + "`" + ` becomes ` + "`" + `paid` + "`" + `.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2876,7 +3414,7 @@ const docTemplate = `{
                 "tags": [
                     "16. Payments"
                 ],
-                "summary": "Submit a mobile-banking payment for a completed tour",
+                "summary": "Manual fallback: submit a mobile-banking payment for an accepted booking",
                 "parameters": [
                     {
                         "type": "string",
@@ -2923,6 +3461,116 @@ const docTemplate = `{
                     },
                     "422": {
                         "description": "PAYMENT_AMOUNT_MISMATCH",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/plan": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Arrival, pickup point (Google Maps link), hotel and day-by-day itinerary. Tourist, guide and admins.\n` + "`" + `exists=false` + "`" + ` until someone saves it; ` + "`" + `can_edit` + "`" + ` once the booking is paid (until completed).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "20. Trip plan \u0026 chat"
+                ],
+                "summary": "Trip plan of a booking",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.TripPlanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replaces the whole plan. Map links must be http(s) (e.g. Google Maps share links).\nThe other side and admins get a live ` + "`" + `plan:updated` + "`" + ` event.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "20. Trip plan \u0026 chat"
+                ],
+                "summary": "Save the trip plan (tourist or guide, after payment)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Plan",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TripPlanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.TripPlanResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "409": {
+                        "description": "TRIP_PLAN_NOT_OPEN",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
                         }
@@ -3069,6 +3717,55 @@ const docTemplate = `{
                         "description": "VALIDATION_ERROR | TOO_MANY_IMAGES | INVALID_IMAGE",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/bookings/{id}/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "16. Payments"
+                ],
+                "summary": "Online payment attempts of a booking",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Booking ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/dto.GatewayPaymentResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -3312,28 +4009,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 600,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 100,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maxLength": 80,
-                        "type": "string",
-                        "example": "tek",
-                        "name": "q",
-                        "in": "query"
-                    },
-                    {
                         "enum": [
                             "upazila",
                             "metro_thana"
@@ -3450,14 +4125,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
                         "minimum": 0,
                         "type": "integer",
                         "example": 10000,
@@ -3469,33 +4136,6 @@ const docTemplate = `{
                         "type": "integer",
                         "example": 500,
                         "name": "min_price",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maxLength": 100,
-                        "type": "string",
-                        "example": "boat",
-                        "name": "q",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "rating",
-                            "price_low",
-                            "price_high",
-                            "newest",
-                            "popular"
-                        ],
-                        "type": "string",
-                        "example": "rating",
-                        "name": "sort",
                         "in": "query"
                     },
                     {
@@ -3832,6 +4472,280 @@ const docTemplate = `{
                 }
             }
         },
+        "/gigs/me/{id}/images": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "multipart/form-data: repeat ` + "`" + `images` + "`" + ` for several files (JPEG/PNG/WEBP, max MAX_UPLOAD_SIZE_MB\neach, min 400x400 — crop them in the browser first). Optional ` + "`" + `captions` + "`" + ` in the same order.\nMax 12 photos per gig; the first photo is the cover.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "Upload photos to my gig",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Photo (repeatable)",
+                        "name": "images",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Caption for each photo (repeatable)",
+                        "name": "captions",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "INVALID_IMAGE | TOO_MANY_IMAGES",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "UPLOAD_UNAVAILABLE",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/gigs/me/{id}/images/{imageId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "multipart/form-data with one ` + "`" + `image` + "`" + `. Position and caption stay the same.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "Replace one photo (e.g. after re-cropping)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Photo ID",
+                        "name": "imageId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "New photo",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "IMAGE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "Delete one photo of my gig",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Photo ID",
+                        "name": "imageId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "IMAGE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "13. Guide · My gigs"
+                ],
+                "summary": "Edit a photo caption / make it the cover",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Photo ID",
+                        "name": "imageId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Changes",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.UpdateImageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GigResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "IMAGE_NOT_FOUND",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/gigs/{id}": {
             "get": {
                 "produces": [
@@ -3879,6 +4793,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/gigs/{id}/booked-dates": {
+            "get": {
+                "description": "Days the guide is already booked (accepted tours of ANY of their gigs), so the date picker can\ngrey them out. Default range: today → +6 months. No personal data.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "14. Gigs · Public"
+                ],
+                "summary": "Booked dates of a gig's guide (calendar slots)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Gig ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-12-01",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2027-03-01",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BookedDatesResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/guides": {
             "get": {
                 "description": "Only approved, active and available guides are listed. Contact info is never exposed.",
@@ -3904,14 +4872,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 50,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
                         "minimum": 0,
                         "type": "integer",
                         "example": 2000,
@@ -3923,34 +4883,6 @@ const docTemplate = `{
                         "type": "integer",
                         "example": 300,
                         "name": "min_rate",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 1000,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maxLength": 100,
-                        "type": "string",
-                        "example": "rahim",
-                        "name": "q",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "rating",
-                            "experience",
-                            "price_low",
-                            "price_high",
-                            "newest"
-                        ],
-                        "type": "string",
-                        "example": "rating",
-                        "name": "sort",
                         "in": "query"
                     },
                     {
@@ -4846,37 +5778,14 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maxLength": 100,
-                        "type": "string",
-                        "example": "beach",
-                        "name": "q",
-                        "in": "query"
-                    },
-                    {
                         "enum": [
-                            "popular",
-                            "rating",
-                            "newest",
-                            "title"
+                            "images",
+                            "coordinates",
+                            "videos"
                         ],
                         "type": "string",
-                        "example": "popular",
-                        "name": "sort",
+                        "example": "images",
+                        "name": "missing",
                         "in": "query"
                     },
                     {
@@ -5039,6 +5948,100 @@ const docTemplate = `{
                         "description": "AUTOFILL_FAILED",
                         "schema": {
                             "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/tourist-spots/bulk": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Apply one action to 1-100 spots: publish, unpublish (back to draft), archive, feature, unfeature\nor delete. Spots that cannot take the action are listed in data.skipped (SPOT_NOT_FOUND,\nSPOT_HAS_ACTIVE_GIGS for delete) — the rest are still changed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Bulk action on tourist spots",
+                "parameters": [
+                    {
+                        "description": "IDs + action",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.BulkSpotRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.BulkSpotResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "422": {
+                        "description": "VALIDATION_ERROR",
+                        "schema": {
+                            "$ref": "#/definitions/response.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/manage/tourist-spots/stats": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Spot counts by status, featured, \"needs work\" (no photos / no videos / no map coordinates),\nspots with guide gigs, districts covered by published spots and spots per category.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "12. Manage · Tourist spots"
+                ],
+                "summary": "Content studio counters",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.SpotStats"
+                                        }
+                                    }
+                                }
+                            ]
                         }
                     }
                 }
@@ -5326,6 +6329,42 @@ const docTemplate = `{
                 }
             }
         },
+        "/messages/unread": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "20. Trip plan \u0026 chat"
+                ],
+                "summary": "Unread chat messages (total + per booking)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UnreadMessages"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/meta/countries": {
             "get": {
                 "description": "250 countries sorted by name: ISO code (send it as ` + "`" + `country_code` + "`" + `), dial code, emoji and\nflag image URLs from the free flagcdn.com CDN. Cached for a day.",
@@ -5361,16 +6400,161 @@ const docTemplate = `{
                 }
             }
         },
+        "/notifications": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "19. Realtime \u0026 notifications"
+                ],
+                "summary": "My notifications",
+                "parameters": [
+                    {
+                        "maxLength": 40,
+                        "type": "string",
+                        "example": "booking.accepted",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "example": false,
+                        "name": "unread",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.ItemPage"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/read-all": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "19. Realtime \u0026 notifications"
+                ],
+                "summary": "Mark all my notifications read",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/unread-count": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "19. Realtime \u0026 notifications"
+                ],
+                "summary": "Unread notification count (badge)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.UnreadCount"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/notifications/{id}/read": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "19. Realtime \u0026 notifications"
+                ],
+                "summary": "Mark one notification read",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "Notification ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/response.Body"
+                        }
+                    }
+                }
+            }
+        },
         "/payment-methods": {
             "get": {
-                "description": "Default payment option: send the booking total to one of these numbers (\"Send Money\"/\"Payment\"),\nthen submit the transaction ID with POST /bookings/{id}/payments.",
+                "description": "The main option is online payment (POST /bookings/{id}/pay, aamarPay). Fallback: send the booking total to one of these numbers (\"Send Money\"/\"Payment\"),\nthen submit the transaction ID with POST /bookings/{id}/payments.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "16. Payments"
                 ],
-                "summary": "Where to send money (bKash / Nagad / Rocket numbers)",
+                "summary": "Manual fallback: where to send money (bKash / Nagad / Rocket numbers)",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -5387,6 +6571,119 @@ const docTemplate = `{
                                             "items": {
                                                 "$ref": "#/definitions/dto.PaymentMethodResponse"
                                             }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/aamarpay/return": {
+            "post": {
+                "description": "aamarPay posts the result here. Nothing in the request is trusted: the API re-checks the\ntransaction with aamarPay (amount, currency, store) and then 303-redirects to the website.",
+                "tags": [
+                    "16. Payments"
+                ],
+                "summary": "aamarPay return URL (browser redirect, not for API clients)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Our transaction ID",
+                        "name": "tran_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "success | fail | cancel",
+                        "name": "result",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "303": {
+                        "description": "See Other"
+                    }
+                }
+            }
+        },
+        "/payments/aamarpay/{tran_id}/verify": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Asks aamarPay again (e.g. the browser was closed before returning). Safe to call repeatedly.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "16. Payments"
+                ],
+                "summary": "Re-check an online payment (payer or admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Transaction ID",
+                        "name": "tran_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.GatewayPaymentResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/realtime/ticket": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a single-use ticket (valid 60 s). Connect with socket.io-client v4:\n` + "`" + `io(API_ORIGIN, { path: \"/socket.io/\", auth: { ticket } })` + "`" + `. The socket joins the rooms\n` + "`" + `user:\u003cid\u003e` + "`" + ` and ` + "`" + `role:\u003crole\u003e` + "`" + ` and receives: ` + "`" + `notification` + "`" + `, ` + "`" + `booking:updated` + "`" + `, ` + "`" + `payment:updated` + "`" + `,\n` + "`" + `message:new` + "`" + `, ` + "`" + `message:read` + "`" + `, ` + "`" + `plan:updated` + "`" + `, ` + "`" + `admin:activity` + "`" + ` (admins). Get a new ticket for every (re)connect.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "19. Realtime \u0026 notifications"
+                ],
+                "summary": "Socket.IO connection ticket",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/response.Body"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/dto.Ticket"
                                         }
                                     }
                                 }
@@ -5420,29 +6717,11 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "maximum": 50,
+                        "maximum": 5,
                         "minimum": 1,
                         "type": "integer",
-                        "example": 10,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "newest",
-                            "highest",
-                            "lowest"
-                        ],
-                        "type": "string",
-                        "example": "newest",
-                        "name": "sort",
+                        "example": 5,
+                        "name": "rating",
                         "in": "query"
                     },
                     {
@@ -5594,40 +6873,6 @@ const docTemplate = `{
                         "type": "boolean",
                         "example": true,
                         "name": "featured",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 20,
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "example": 1,
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maxLength": 100,
-                        "type": "string",
-                        "example": "beach",
-                        "name": "q",
-                        "in": "query"
-                    },
-                    {
-                        "enum": [
-                            "popular",
-                            "rating",
-                            "newest",
-                            "title"
-                        ],
-                        "type": "string",
-                        "example": "popular",
-                        "name": "sort",
                         "in": "query"
                     },
                     {
@@ -6403,6 +7648,40 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.AdminCancelRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 5,
+                    "example": "Guide fell ill, tourist refunded."
+                },
+                "refunded": {
+                    "description": "Refunded marks the payment as refunded (refund itself is done in the aamarPay merchant panel).",
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "dto.AdminCompleteRequest": {
+            "type": "object",
+            "required": [
+                "note"
+            ],
+            "properties": {
+                "note": {
+                    "description": "Note is required: what the admin confirmed with the guide.",
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 5,
+                    "example": "Called the guide: tour finished on 22 Dec, tourist unreachable."
+                }
+            }
+        },
         "dto.AdminGigStatusRequest": {
             "type": "object",
             "required": [
@@ -6719,6 +7998,40 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.BookedDatesResponse": {
+            "type": "object",
+            "properties": {
+                "dates": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "2026-12-20",
+                        "2026-12-21",
+                        "2026-12-22"
+                    ]
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-12-01"
+                },
+                "gig_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "ranges": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.BusyRange"
+                    }
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2027-03-01"
+                }
+            }
+        },
         "dto.BookingGig": {
             "type": "object",
             "properties": {
@@ -6769,11 +8082,23 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
+                "can_chat": {
+                    "description": "paid: tourist \u003c-\u003e guide messages",
+                    "type": "boolean",
+                    "example": false
+                },
                 "can_complete": {
+                    "description": "CanComplete: tourist confirms the tour is done (paid, on/after tour_date) — or an admin after end_date.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "can_edit_plan": {
+                    "description": "paid \u0026 not finished: trip plan editable",
                     "type": "boolean",
                     "example": false
                 },
                 "can_pay": {
+                    "description": "accepted + unpaid (tourist)",
                     "type": "boolean",
                     "example": false
                 },
@@ -6795,12 +8120,28 @@ const docTemplate = `{
                 "completed_at": {
                     "type": "string"
                 },
+                "completed_by": {
+                    "description": "CompletedBy: \"tourist\" or \"admin\".",
+                    "type": "string",
+                    "example": "tourist"
+                },
+                "completion_note": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
                 "currency": {
                     "type": "string",
                     "example": "BDT"
+                },
+                "days": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "end_date": {
+                    "type": "string",
+                    "example": "2026-12-22"
                 },
                 "gig": {
                     "$ref": "#/definitions/dto.BookingGig"
@@ -6820,6 +8161,10 @@ const docTemplate = `{
                         }
                     ]
                 },
+                "has_plan": {
+                    "type": "boolean",
+                    "example": false
+                },
                 "has_review": {
                     "type": "boolean",
                     "example": false
@@ -6829,6 +8174,9 @@ const docTemplate = `{
                     "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
                 },
                 "note": {
+                    "type": "string"
+                },
+                "paid_at": {
                     "type": "string"
                 },
                 "payment_status": {
@@ -6915,6 +8263,115 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.BulkSkipped": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "SPOT_HAS_ACTIVE_GIGS"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "guides still offer tours for this spot; archive it instead of deleting"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Sajek Valley"
+                }
+            }
+        },
+        "dto.BulkSpotRequest": {
+            "type": "object",
+            "required": [
+                "action",
+                "ids"
+            ],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "publish",
+                        "unpublish",
+                        "archive",
+                        "feature",
+                        "unfeature",
+                        "delete"
+                    ],
+                    "example": "publish"
+                },
+                "ids": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                    ]
+                }
+            }
+        },
+        "dto.BulkSpotResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "example": "publish"
+                },
+                "affected": {
+                    "description": "changed (or deleted)",
+                    "type": "integer",
+                    "example": 4
+                },
+                "requested": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "skipped": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.BulkSkipped"
+                    }
+                },
+                "unchanged": {
+                    "description": "already in the requested status",
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "dto.BusyRange": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "string",
+                    "example": "2026-12-22"
+                },
+                "start": {
+                    "type": "string",
+                    "example": "2026-12-20"
+                }
+            }
+        },
+        "dto.CategoryCount": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "beach"
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 6
+                }
+            }
+        },
         "dto.ChangePasswordRequest": {
             "type": "object",
             "required": [
@@ -6955,6 +8412,50 @@ const docTemplate = `{
                     "maxLength": 200,
                     "minLength": 20,
                     "example": "q4Zr8...registration-token"
+                }
+            }
+        },
+        "dto.CompleteLocalUserRegistrationRequest": {
+            "type": "object",
+            "required": [
+                "full_name",
+                "registration_token"
+            ],
+            "properties": {
+                "city": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "example": "Chattogram"
+                },
+                "full_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Tanvir Ahmed"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "Travel2026!"
+                },
+                "preferred_language": {
+                    "type": "string",
+                    "example": "bn"
+                },
+                "registration_token": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "minLength": 20,
+                    "example": "q4Zr8...registration-token"
+                }
+            }
+        },
+        "dto.CompleteRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Great tour, everything as planned."
                 }
             }
         },
@@ -7020,6 +8521,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "+8801712345678"
                 },
+                "end_date": {
+                    "description": "EndDate of a multi-day tour (inclusive). Default: tour_date + the gig's duration in days - 1.",
+                    "type": "string",
+                    "example": "2026-12-22"
+                },
                 "gig_id": {
                     "type": "string",
                     "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
@@ -7074,11 +8580,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000,
                     "example": "Free cancellation up to 48 hours before the tour."
-                },
-                "cover_image_url": {
-                    "type": "string",
-                    "maxLength": 1000,
-                    "example": ""
                 },
                 "description": {
                     "type": "string",
@@ -7656,6 +9157,150 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.GatewayEventResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "event": {
+                    "type": "string",
+                    "example": "verified"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "payload": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
+        "dto.GatewayPaymentPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.GatewayPaymentResponse"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.GatewayPaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 6000
+                },
+                "bank_txn": {
+                    "type": "string"
+                },
+                "booking_code": {
+                    "type": "string",
+                    "example": "CB7K3D9QXA"
+                },
+                "booking_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "card_number": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "events": {
+                    "description": "admin detail only",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.GatewayEventResponse"
+                    }
+                },
+                "failure_reason": {
+                    "type": "string"
+                },
+                "gateway": {
+                    "type": "string",
+                    "example": "aamarpay"
+                },
+                "gig_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "gig_title": {
+                    "type": "string",
+                    "example": "Full-day Sundarbans boat safari"
+                },
+                "guide": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "mode": {
+                    "type": "string",
+                    "enum": [
+                        "sandbox",
+                        "live"
+                    ],
+                    "example": "sandbox"
+                },
+                "paid_amount": {
+                    "type": "number",
+                    "example": 6000
+                },
+                "payer": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                },
+                "payment_type": {
+                    "type": "string",
+                    "example": "bKash-bKash"
+                },
+                "pg_txn_id": {
+                    "type": "string",
+                    "example": "AAM1702512345678"
+                },
+                "processing_charge": {
+                    "type": "number",
+                    "example": 120
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "initiated",
+                        "success",
+                        "failed",
+                        "cancelled",
+                        "duplicate"
+                    ],
+                    "example": "success"
+                },
+                "store_amount": {
+                    "type": "number",
+                    "example": 5880
+                },
+                "tran_id": {
+                    "type": "string",
+                    "example": "CBP-01JF7Q2W8X3Y4Z5A6B7C8D9E0F"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.GeoRef": {
             "type": "object",
             "properties": {
@@ -7716,7 +9361,7 @@ const docTemplate = `{
                     "example": 15
                 },
                 "cover_image_url": {
-                    "description": "gig cover, falls back to the spot cover",
+                    "description": "first photo, falls back to the spot cover",
                     "type": "string"
                 },
                 "created_at": {
@@ -7745,6 +9390,13 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "images": {
+                    "description": "gallery, cover first",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_modules_gig_dto.ImageResponse"
+                    }
                 },
                 "includes": {
                     "type": "array",
@@ -8070,29 +9722,91 @@ const docTemplate = `{
                 }
             }
         },
-        "dto.ImageResponse": {
+        "dto.Item": {
             "type": "object",
             "properties": {
-                "caption": {
+                "body": {
                     "type": "string",
-                    "example": "Boats at the jetty"
+                    "example": "Rahim accepted your Sundarbans tour. Pay now to confirm."
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {}
                 },
                 "id": {
                     "type": "string",
                     "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
                 },
-                "source_url": {
+                "link": {
                     "type": "string",
-                    "example": "https://commons.wikimedia.org/wiki/File:Saint_Martins_Island.jpg"
+                    "example": "/account/bookings/0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
                 },
-                "uploaded": {
-                    "description": "true = stored in our Cloudinary",
+                "read": {
                     "type": "boolean",
                     "example": false
                 },
-                "url": {
+                "title": {
                     "type": "string",
-                    "example": "https://thumb.wikimedia.org/.../1280px-Saint_Martins_Island.jpg"
+                    "example": "Booking accepted"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "booking.accepted"
+                }
+            }
+        },
+        "dto.ItemPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.Item"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.ItineraryItem": {
+            "type": "object",
+            "required": [
+                "date",
+                "title"
+            ],
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "example": "2026-12-20"
+                },
+                "map_url": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "https://maps.app.goo.gl/xyz"
+                },
+                "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Bring sunscreen"
+                },
+                "place": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "example": "Mongla ferry ghat"
+                },
+                "time": {
+                    "type": "string",
+                    "example": "09:00"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "minLength": 2,
+                    "example": "Boat leaves Mongla for Harbaria"
                 }
             }
         },
@@ -8255,6 +9969,58 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.MessageRequest": {
+            "type": "object",
+            "required": [
+                "body"
+            ],
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "minLength": 1,
+                    "example": "Hi! We land at 6:30 pm, see you at the bus stand."
+                }
+            }
+        },
+        "dto.MessageResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "See you tomorrow!"
+                },
+                "booking_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "user",
+                        "system"
+                    ],
+                    "example": "user"
+                },
+                "mine": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "read_at": {
+                    "type": "string"
+                },
+                "sender": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                }
+            }
+        },
         "dto.MyGigsResponse": {
             "type": "object",
             "properties": {
@@ -8408,6 +10174,32 @@ const docTemplate = `{
                 "total_pages": {
                     "type": "integer",
                     "example": 3
+                }
+            }
+        },
+        "dto.PayOnlineResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 6000
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "BDT"
+                },
+                "payment_url": {
+                    "description": "Redirect the browser here (aamarPay hosted payment page).",
+                    "type": "string",
+                    "example": "https://sandbox.aamarpay.com/paynow.php?track=AAM123"
+                },
+                "sandbox": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "tran_id": {
+                    "type": "string",
+                    "example": "CBP-01JF7Q2W8X3Y4Z5A6B7C8D9E0F"
                 }
             }
         },
@@ -8649,6 +10441,10 @@ const docTemplate = `{
                 "avatar_url": {
                     "type": "string"
                 },
+                "country_code": {
+                    "type": "string",
+                    "example": "GB"
+                },
                 "full_name": {
                     "type": "string",
                     "example": "Rahim Uddin"
@@ -8656,6 +10452,11 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "role": {
+                    "description": "Role is set on chat senders: \"system\" for CholoBangladesh notes.",
+                    "type": "string",
+                    "example": "system"
                 }
             }
         },
@@ -9097,6 +10898,9 @@ const docTemplate = `{
                 "cover_image_url": {
                     "type": "string"
                 },
+                "created_at": {
+                    "type": "string"
+                },
                 "district": {
                     "$ref": "#/definitions/dto.GeoRef"
                 },
@@ -9110,6 +10914,11 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "image_count": {
+                    "description": "Staff listing only (GET /manage/tourist-spots).",
+                    "type": "integer",
+                    "example": 12
                 },
                 "is_featured": {
                     "type": "boolean",
@@ -9150,6 +10959,13 @@ const docTemplate = `{
                 "title": {
                     "type": "string",
                     "example": "Saint Martin's Island"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "video_count": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },
@@ -9200,10 +11016,15 @@ const docTemplate = `{
                     "type": "string",
                     "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
                 },
+                "image_count": {
+                    "description": "Staff listing only (GET /manage/tourist-spots).",
+                    "type": "integer",
+                    "example": 12
+                },
                 "images": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dto.ImageResponse"
+                        "$ref": "#/definitions/internal_modules_spot_dto.ImageResponse"
                     }
                 },
                 "is_featured": {
@@ -9257,6 +11078,10 @@ const docTemplate = `{
                 },
                 "updated_at": {
                     "type": "string"
+                },
+                "video_count": {
+                    "type": "integer",
+                    "example": 2
                 },
                 "videos": {
                     "type": "array",
@@ -9320,6 +11145,61 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.SpotStats": {
+            "type": "object",
+            "properties": {
+                "archived": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "by_category": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.CategoryCount"
+                    }
+                },
+                "districts_covered": {
+                    "type": "integer",
+                    "example": 27
+                },
+                "draft": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "featured": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "missing_coordinates": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "missing_images": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "missing_videos": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "published": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "total_districts": {
+                    "type": "integer",
+                    "example": 64
+                },
+                "with_gigs": {
+                    "type": "integer",
+                    "example": 18
+                }
+            }
+        },
         "dto.SubmitPaymentRequest": {
             "type": "object",
             "required": [
@@ -9368,6 +11248,23 @@ const docTemplate = `{
                         "type": "integer",
                         "format": "int64"
                     }
+                }
+            }
+        },
+        "dto.Ticket": {
+            "type": "object",
+            "properties": {
+                "expires_in": {
+                    "type": "integer",
+                    "example": 60
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/socket.io/"
+                },
+                "ticket": {
+                    "type": "string",
+                    "example": "pX2...one-time-ticket"
                 }
             }
         },
@@ -9447,6 +11344,182 @@ const docTemplate = `{
                 "type": {
                     "type": "string",
                     "example": "upazila"
+                }
+            }
+        },
+        "dto.TripPlanAdminItem": {
+            "type": "object",
+            "properties": {
+                "booking": {
+                    "$ref": "#/definitions/dto.BookingResponse"
+                },
+                "plan": {
+                    "$ref": "#/definitions/dto.TripPlanResponse"
+                }
+            }
+        },
+        "dto.TripPlanPage": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TripPlanAdminItem"
+                    }
+                },
+                "meta": {
+                    "$ref": "#/definitions/response.PageMeta"
+                }
+            }
+        },
+        "dto.TripPlanRequest": {
+            "type": "object",
+            "properties": {
+                "arrival_at": {
+                    "description": "When the tourist arrives (RFC3339).",
+                    "type": "string",
+                    "example": "2026-12-19T18:30:00+06:00"
+                },
+                "arrival_from": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "example": "Dhaka (Sayedabad bus terminal)"
+                },
+                "arrival_mode": {
+                    "type": "string",
+                    "enum": [
+                        "bus",
+                        "train",
+                        "air",
+                        "car",
+                        "launch",
+                        "other"
+                    ],
+                    "example": "bus"
+                },
+                "hotel_check_in": {
+                    "type": "string",
+                    "example": "2026-12-19"
+                },
+                "hotel_check_out": {
+                    "type": "string",
+                    "example": "2026-12-22"
+                },
+                "hotel_map_url": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "https://maps.app.goo.gl/def"
+                },
+                "hotel_name": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "example": "Hotel Castle Salam, Khulna"
+                },
+                "itinerary": {
+                    "type": "array",
+                    "maxItems": 60,
+                    "items": {
+                        "$ref": "#/definitions/dto.ItineraryItem"
+                    }
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 2000,
+                    "example": "Guide will wait with a CholoBangladesh sign."
+                },
+                "pickup_map_url": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "https://maps.app.goo.gl/abc"
+                },
+                "pickup_name": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "example": "Khulna Sonadanga bus stand"
+                }
+            }
+        },
+        "dto.TripPlanResponse": {
+            "type": "object",
+            "properties": {
+                "arrival_at": {
+                    "type": "string"
+                },
+                "arrival_from": {
+                    "type": "string"
+                },
+                "arrival_mode": {
+                    "type": "string"
+                },
+                "booking_id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "can_edit": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "exists": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "hotel_check_in": {
+                    "type": "string"
+                },
+                "hotel_check_out": {
+                    "type": "string"
+                },
+                "hotel_map_url": {
+                    "type": "string"
+                },
+                "hotel_name": {
+                    "type": "string"
+                },
+                "itinerary": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.ItineraryItem"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "pickup_map_url": {
+                    "type": "string"
+                },
+                "pickup_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "$ref": "#/definitions/dto.PersonRef"
+                }
+            }
+        },
+        "dto.UnreadCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "dto.UnreadMessages": {
+            "type": "object",
+            "properties": {
+                "bookings": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 4
                 }
             }
         },
@@ -9650,10 +11723,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 1000
                 },
-                "cover_image_url": {
-                    "type": "string",
-                    "maxLength": 1000
-                },
                 "description": {
                     "type": "string",
                     "maxLength": 10000,
@@ -9728,6 +11797,20 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 150,
                     "minLength": 10
+                }
+            }
+        },
+        "dto.UpdateImageRequest": {
+            "type": "object",
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "maxLength": 300,
+                    "example": "Sunset from the boat"
+                },
+                "cover": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -10225,6 +12308,58 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_modules_gig_dto.ImageResponse": {
+            "type": "object",
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Sunset from the boat"
+                },
+                "cover": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "uploaded": {
+                    "description": "false = an old external URL",
+                    "type": "boolean",
+                    "example": true
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://res.cloudinary.com/.../gigs/....webp"
+                }
+            }
+        },
+        "internal_modules_spot_dto.ImageResponse": {
+            "type": "object",
+            "properties": {
+                "caption": {
+                    "type": "string",
+                    "example": "Boats at the jetty"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"
+                },
+                "source_url": {
+                    "type": "string",
+                    "example": "https://commons.wikimedia.org/wiki/File:Saint_Martins_Island.jpg"
+                },
+                "uploaded": {
+                    "description": "true = stored in our Cloudinary",
+                    "type": "boolean",
+                    "example": false
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://thumb.wikimedia.org/.../1280px-Saint_Martins_Island.jpg"
+                }
+            }
+        },
         "meta.Country": {
             "type": "object",
             "properties": {
@@ -10318,6 +12453,14 @@ const docTemplate = `{
         "response.PageMeta": {
             "type": "object",
             "properties": {
+                "has_next": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "has_prev": {
+                    "type": "boolean",
+                    "example": false
+                },
                 "limit": {
                     "type": "integer",
                     "example": 20
@@ -10325,6 +12468,11 @@ const docTemplate = `{
                 "page": {
                     "type": "integer",
                     "example": 1
+                },
+                "sort": {
+                    "description": "the sort that was applied",
+                    "type": "string",
+                    "example": "newest"
                 },
                 "total": {
                     "type": "integer",

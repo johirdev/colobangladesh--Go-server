@@ -9,6 +9,7 @@ import (
 
 	"cholobangladesh-server/internal/http/middleware"
 	"cholobangladesh-server/pkg/apperror"
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 	"cholobangladesh-server/pkg/validation"
 
@@ -85,25 +86,8 @@ func UserID(c *gin.Context) uuid.UUID { return middleware.UserID(c) }
 
 func Role(c *gin.Context) string { return middleware.Role(c) }
 
-// Paging normalises page/limit (limit capped at max).
-func Paging(page, limit, def, max int) (int, int) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = def
-	}
-	if limit > max {
-		limit = max
-	}
-	return page, limit
-}
-
-// Like builds an escaped ILIKE pattern: %term%.
-func Like(s string) string {
-	r := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
-	return "%" + r.Replace(strings.TrimSpace(s)) + "%"
-}
+// Like builds an escaped ILIKE pattern: %term% (see listing.Like).
+func Like(s string) string { return listing.Like(s) }
 
 // Slugify turns "Cox's Bazar Sea Beach" into "coxs-bazar-sea-beach".
 func Slugify(s string) string {

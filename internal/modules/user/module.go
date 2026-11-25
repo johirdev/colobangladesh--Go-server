@@ -63,6 +63,7 @@ func New(d *shared.Deps) (*Module, error) {
 		SMS:      d.SMS,
 		Storage:  files,
 		Identity: oauthAdapter{d.OAuth},
+		Notify:   notifier(d),
 	})
 	return &Module{Service: svc, h: handler.New(svc), d: d}, nil
 }
@@ -101,6 +102,9 @@ func (m *Module) Routes(rg *gin.RouterGroup) {
 		a.POST("/register/user/send-otp", captcha, otpLimit, h.SendUserRegistrationOTP)
 		a.POST("/register/user/verify-otp", h.VerifyUserRegistrationOTP)
 		a.POST("/register/user/complete", h.CompleteUserRegistration)
+		a.POST("/register/user/phone/send-otp", captcha, otpLimit, h.SendLocalUserRegistrationOTP)
+		a.POST("/register/user/phone/verify-otp", h.VerifyLocalUserRegistrationOTP)
+		a.POST("/register/user/phone/complete", h.CompleteLocalUserRegistration)
 
 		a.POST("/register/guide/send-otp", captcha, otpLimit, h.SendGuideRegistrationOTP)
 		a.POST("/register/guide/verify-otp", h.VerifyGuideRegistrationOTP)
@@ -164,6 +168,13 @@ func (m *Module) Routes(rg *gin.RouterGroup) {
 }
 
 // ------------------------------------------------------------------ adapters
+
+func notifier(d *shared.Deps) shared.Notifier {
+	if d.Notify == nil {
+		return shared.NopNotifier{}
+	}
+	return d.Notify
+}
 
 type oauthAdapter struct{ v *oauth.Verifier }
 

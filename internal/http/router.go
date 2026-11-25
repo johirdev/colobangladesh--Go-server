@@ -16,6 +16,22 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// gatewayReturnPath receives aamarPay's cross-site form POST (Origin: aamarpay.com). It is a
+// browser navigation, not an XHR, and its result is verified server-to-server, so CORS
+// (which answers 403 for an unknown origin) must not run there.
+const gatewayReturnPath = "/api/v1/payments/aamarpay/return"
+
+// skipFor runs mw on every request except the given path.
+func skipFor(path string, mw gin.HandlerFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.URL.Path == path {
+			c.Next()
+			return
+		}
+		mw(c)
+	}
+}
+
 // Module is implemented by every feature module.
 type Module interface {
 	Routes(rg *gin.RouterGroup)
@@ -40,14 +56,14 @@ func NewRouter(d *shared.Deps, modules ...Module) (*gin.Engine, error) {
 		middleware.Logger(),
 		middleware.Recovery(),
 		middleware.SecureHeaders(cfg.App.IsProduction()),
-		cors.New(cors.Config{
+		skipFor(gatewayReturnPath, cors.New(cors.Config{
 			AllowOrigins:     cfg.App.CORSOrigins,
 			AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 			AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Captcha-Token", "X-Request-ID"},
 			ExposeHeaders:    []string{"X-Request-ID", "Retry-After", "X-RateLimit-Limit", "X-RateLimit-Remaining"},
 			AllowCredentials: true,
 			MaxAge:           12 * time.Hour,
-		}),
+		})),
 		middleware.BodyLimit(cfg.Security.MaxBodyBytes, cfg.Security.MaxUploadBytes*3+(1<<20)),
 	)
 	r.NoRoute(middleware.NotFound())

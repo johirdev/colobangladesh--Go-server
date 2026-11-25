@@ -10,6 +10,7 @@ import (
 	"cholobangladesh-server/internal/modules/gig/domain"
 	"cholobangladesh-server/internal/modules/gig/dto"
 	"cholobangladesh-server/internal/shared/web"
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 
 	"github.com/google/uuid"
@@ -17,11 +18,13 @@ import (
 
 type Service struct {
 	repo      domain.Repository
+	files     domain.FileStorage // nil when Cloudinary is not configured
+	maxBytes  int64
 	freeLimit int
 }
 
-func New(repo domain.Repository, freeLimit int) *Service {
-	return &Service{repo: repo, freeLimit: freeLimit}
+func New(repo domain.Repository, files domain.FileStorage, maxUploadBytes int64, freeLimit int) *Service {
+	return &Service{repo: repo, files: files, maxBytes: maxUploadBytes, freeLimit: freeLimit}
 }
 
 func gigNotFound(err error) error { return web.As(err, web.ErrNotFound, domain.ErrGigNotFound) }
@@ -102,7 +105,7 @@ func (s *Service) Create(ctx context.Context, guideID uuid.UUID, req dto.CreateG
 		DurationHours: req.DurationHours, MaxGroupSize: req.MaxGroupSize, Languages: lower(req.Languages),
 		Includes: web.CleanList(req.Includes), Excludes: web.CleanList(req.Excludes), AvailableDays: req.AvailableDays,
 		MeetingPoint: trim(req.MeetingPoint), CancellationPolicy: trim(req.CancellationPolicy),
-		CoverImageURL: trim(req.CoverImageURL), Status: status,
+		Status: status,
 	}
 	if g.AvailableDays == nil {
 		g.AvailableDays = []string{}
@@ -160,8 +163,7 @@ func (s *Service) Update(ctx context.Context, guideID, id uuid.UUID, req dto.Upd
 	if req.AvailableDays != nil {
 		f["available_days"] = *req.AvailableDays
 	}
-	for key, v := range map[string]*string{"meeting_point": req.MeetingPoint, "cancellation_policy": req.CancellationPolicy,
-		"cover_image_url": req.CoverImageURL} {
+	for key, v := range map[string]*string{"meeting_point": req.MeetingPoint, "cancellation_policy": req.CancellationPolicy} {
 		if v != nil {
 			f[key] = trim(v)
 		}
@@ -210,12 +212,11 @@ func (s *Service) owned(ctx context.Context, guideID, id uuid.UUID) (*domain.Gig
 // ================================================================== public
 
 func (s *Service) List(ctx context.Context, q dto.GigQuery) (response.Page[dto.GigResponse], error) {
-	page, limit := web.Paging(q.Page, q.Limit, 20, 100)
-	list, total, err := s.repo.ListPublic(ctx, filter(q, page, limit, ""))
+	res, err := s.repo.ListPublic(ctx, filter(q, ""))
 	if err != nil {
 		return response.Page[dto.GigResponse]{}, err
 	}
-	return page2(list, page, limit, total), nil
+	return listing.Map(res, toGig), nil
 }
 
 func (s *Service) Get(ctx context.Context, id uuid.UUID) (*dto.GigResponse, error) {
@@ -230,12 +231,11 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*dto.GigResponse, erro
 // ================================================================== admin
 
 func (s *Service) AdminList(ctx context.Context, q dto.AdminGigQuery) (response.Page[dto.GigResponse], error) {
-	page, limit := web.Paging(q.Page, q.Limit, 20, 100)
-	list, total, err := s.repo.ListAll(ctx, filter(q.GigQuery, page, limit, q.Status))
+	res, err := s.repo.ListAll(ctx, filter(q.GigQuery, q.Status))
 	if err != nil {
 		return response.Page[dto.GigResponse]{}, err
 	}
-	return page2(list, page, limit, total), nil
+	return listing.Map(res, toGig), nil
 }
 
 func (s *Service) AdminSetStatus(ctx context.Context, id uuid.UUID, req dto.AdminGigStatusRequest) (*dto.GigResponse, error) {
@@ -273,9 +273,9 @@ func (s *Service) AdminSetQuota(ctx context.Context, adminID, guideID uuid.UUID,
 
 // ================================================================== helpers
 
-func filter(q dto.GigQuery, page, limit int, status string) domain.Filter {
+func filter(q dto.GigQuery, status string) domain.Filter {
 	f := domain.Filter{DistrictID: q.DistrictID, DivisionID: q.DivisionID, Language: q.Language, MinPrice: q.MinPrice,
-		MaxPrice: q.MaxPrice, Query: q.Q, Sort: q.Sort, Status: status, Page: page, Limit: limit}
+		MaxPrice: q.MaxPrice, Status: status, Params: q.Params}
 	if id, err := uuid.Parse(q.SpotID); err == nil {
 		f.SpotID = id
 	}
@@ -283,14 +283,6 @@ func filter(q dto.GigQuery, page, limit int, status string) domain.Filter {
 		f.GuideID = id
 	}
 	return f
-}
-
-func page2(list []domain.Gig, page, limit int, total int64) response.Page[dto.GigResponse] {
-	items := make([]dto.GigResponse, 0, len(list))
-	for i := range list {
-		items = append(items, toGig(&list[i]))
-	}
-	return response.NewPage(items, page, limit, total)
 }
 
 func lower(in []string) []string {
@@ -326,7 +318,7 @@ func toGig(g *domain.Gig) dto.GigResponse {
 		AvailableDays: nonNil(g.AvailableDays), MeetingPoint: g.MeetingPoint, CancellationPolicy: g.CancellationPolicy,
 		CoverImageURL: g.CoverImageURL, Status: g.Status, SuspendedReason: g.SuspendedReason, RatingAvg: g.RatingAvg,
 		RatingCount: g.RatingCount, BookingCount: g.BookingCount, CompletedCount: g.CompletedCount,
-		CreatedAt: g.CreatedAt, UpdatedAt: g.UpdatedAt}
+		CreatedAt: g.CreatedAt, UpdatedAt: g.UpdatedAt, Images: toImages(g.Images)}
 	if sp := g.Spot; sp != nil {
 		r.Spot = &dto.SpotRef{ID: sp.ID.String(), Slug: sp.Slug, Title: sp.Title, BnTitle: sp.BnTitle,
 			CoverImageURL: sp.CoverImageURL, LocationName: sp.LocationName, DistrictID: sp.DistrictID,

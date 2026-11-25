@@ -448,3 +448,80 @@ func (h *Handler) ResetPassword(c *gin.Context) {
 	}
 	response.OK(c, http.StatusOK, "password has been reset, please log in", nil)
 }
+
+// ============================================================ Bangladeshi tourist sign-up (phone)
+
+// SendLocalUserRegistrationOTP godoc
+//
+//	@Summary		Bangladeshi tourist sign-up · Step 1 — send SMS OTP
+//	@Description	The sign-up screen first asks "Foreigner or Bangladeshi?". Foreigners use the email flow
+//	@Description	(/auth/register/user/*); Bangladeshi tourists sign up with their BD mobile number here.
+//	@Tags			1. Auth · Tourist sign-up
+//	@Accept			json
+//	@Produce		json
+//	@Param			X-Captcha-Token	header		string				false	"Cloudflare Turnstile token (when CAPTCHA_ENABLED)"
+//	@Param			body			body		dto.PhoneOTPRequest	true	"BD mobile number"
+//	@Success		200				{object}	response.Body{data=dto.OTPSentResponse}
+//	@Failure		409				{object}	response.ErrorResponse	"PHONE_ALREADY_REGISTERED"
+//	@Failure		429				{object}	response.ErrorResponse	"OTP_COOLDOWN | OTP_LIMIT_REACHED"
+//	@Router			/auth/register/user/phone/send-otp [post]
+func (h *Handler) SendLocalUserRegistrationOTP(c *gin.Context) {
+	var req dto.PhoneOTPRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	res, err := h.svc.SendLocalUserRegistrationOTP(c.Request.Context(), req.Phone, meta(c))
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, http.StatusOK, "verification code sent", res)
+}
+
+// VerifyLocalUserRegistrationOTP godoc
+//
+//	@Summary	Bangladeshi tourist sign-up · Step 2 — verify SMS OTP
+//	@Tags		1. Auth · Tourist sign-up
+//	@Accept		json
+//	@Produce	json
+//	@Param		body	body		dto.PhoneOTPVerifyRequest	true	"Phone + OTP"
+//	@Success	200		{object}	response.Body{data=dto.VerificationTicketResponse}
+//	@Failure	400		{object}	response.ErrorResponse	"OTP_INVALID | OTP_EXPIRED"
+//	@Router		/auth/register/user/phone/verify-otp [post]
+func (h *Handler) VerifyLocalUserRegistrationOTP(c *gin.Context) {
+	var req dto.PhoneOTPVerifyRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	res, err := h.svc.VerifyLocalUserRegistrationOTP(c.Request.Context(), req.Phone, req.OTP)
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, http.StatusOK, "phone verified", res)
+}
+
+// CompleteLocalUserRegistration godoc
+//
+//	@Summary		Bangladeshi tourist sign-up · Step 3 — create account
+//	@Description	Creates a tourist account with country = BD and logs in (returns tokens).
+//	@Tags			1. Auth · Tourist sign-up
+//	@Accept			json
+//	@Produce		json
+//	@Param			body	body		dto.CompleteLocalUserRegistrationRequest	true	"Account details"
+//	@Success		201		{object}	response.Body{data=dto.AuthResponse}
+//	@Failure		400		{object}	response.ErrorResponse	"VERIFICATION_TOKEN_INVALID"
+//	@Failure		409		{object}	response.ErrorResponse	"PHONE_ALREADY_REGISTERED"
+//	@Router			/auth/register/user/phone/complete [post]
+func (h *Handler) CompleteLocalUserRegistration(c *gin.Context) {
+	var req dto.CompleteLocalUserRegistrationRequest
+	if !bindJSON(c, &req) {
+		return
+	}
+	res, err := h.svc.CompleteLocalUserRegistration(c.Request.Context(), req, meta(c))
+	if err != nil {
+		response.Fail(c, err)
+		return
+	}
+	response.OK(c, http.StatusCreated, "account created", res)
+}

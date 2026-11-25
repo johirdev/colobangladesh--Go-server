@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cholobangladesh-server/pkg/apperror"
+	"cholobangladesh-server/pkg/listing"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -55,9 +56,32 @@ type Gig struct {
 	Spot    *SpotRef    `gorm:"foreignKey:SpotID"`
 	Profile *ProfileRef `gorm:"foreignKey:GuideID;references:UserID"`
 	Guide   *GuideRef   `gorm:"foreignKey:GuideID;references:UserID"`
+	Images  []Image     `gorm:"foreignKey:GigID"`
 }
 
 func (Gig) TableName() string { return "guide_gigs" }
+
+// MaxImages per gig. The first image (lowest position) is the cover.
+const MaxImages = 12
+
+// Image is one photo of a gig gallery (table guide_gig_images).
+type Image struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
+	GigID     uuid.UUID `gorm:"type:uuid"`
+	URL       string    `gorm:"column:url"`
+	PublicID  *string   // Cloudinary public ID (nil for old external URLs)
+	Caption   *string
+	Position  int
+	CreatedAt time.Time
+}
+
+func (Image) TableName() string { return "guide_gig_images" }
+
+// FileStorage stores uploaded gig photos (Cloudinary).
+type FileStorage interface {
+	UploadPublic(ctx context.Context, data []byte, path, publicID string) (url, id string, err error)
+	Delete(ctx context.Context, publicID string) error
+}
 
 // SpotRef is a read-only view of tourist_spots.
 type SpotRef struct {
@@ -135,11 +159,8 @@ type Filter struct {
 	Language   string
 	MinPrice   *int
 	MaxPrice   *int
-	Query      string
 	Status     string // admin listing only
-	Sort       string // rating | price_low | price_high | newest | popular
-	Page       int
-	Limit      int
+	listing.Params
 }
 
 type Repository interface {
@@ -158,10 +179,17 @@ type Repository interface {
 	// GetPublic returns the gig only when it is bookable (active, guide verified & active, spot published).
 	GetPublic(ctx context.Context, id uuid.UUID) (*Gig, error)
 	ListByGuide(ctx context.Context, guideID uuid.UUID) ([]Gig, error)
-	ListPublic(ctx context.Context, f Filter) ([]Gig, int64, error)
-	ListAll(ctx context.Context, f Filter) ([]Gig, int64, error)
+	ListPublic(ctx context.Context, f Filter) (listing.Result[Gig], error)
+	ListAll(ctx context.Context, f Filter) (listing.Result[Gig], error)
 	// RefreshSpotGigCount recomputes tourist_spots.gig_count (active gigs only).
 	RefreshSpotGigCount(ctx context.Context, spotID uuid.UUID) error
+
+	// Gallery — every write also re-syncs guide_gigs.cover_image_url to the first image.
+	Images(ctx context.Context, gigID uuid.UUID) ([]Image, error)
+	AddImages(ctx context.Context, gigID uuid.UUID, imgs []Image) error
+	UpdateImage(ctx context.Context, gigID, imageID uuid.UUID, fields map[string]any) error
+	MakeCover(ctx context.Context, gigID, imageID uuid.UUID) error
+	DeleteImage(ctx context.Context, gigID, imageID uuid.UUID) (*Image, error)
 }
 
 var (
@@ -170,5 +198,8 @@ var (
 	ErrSpotNotFound    = apperror.New(http.StatusUnprocessableEntity, "SPOT_NOT_FOUND", "tourist spot not found or not published")
 	ErrGigLimitReached = apperror.New(http.StatusPaymentRequired, "GIG_LIMIT_REACHED", "you have used all your gig slots; delete a gig or get extra slots")
 	ErrDuplicateGig    = apperror.New(http.StatusConflict, "GIG_ALREADY_EXISTS", "you already have a gig for this tourist spot; edit it instead")
+	ErrImageNotFound   = apperror.New(http.StatusNotFound, "IMAGE_NOT_FOUND", "photo not found")
+	ErrTooManyImages   = apperror.New(http.StatusUnprocessableEntity, "TOO_MANY_IMAGES", "a gig can have at most 12 photos")
+	ErrUploadsOff      = apperror.New(http.StatusServiceUnavailable, "UPLOAD_UNAVAILABLE", "photo uploads are temporarily unavailable")
 	ErrGigSuspended    = apperror.New(http.StatusForbidden, "GIG_SUSPENDED", "this gig was suspended by an admin; contact support")
 )

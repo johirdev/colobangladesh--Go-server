@@ -15,7 +15,7 @@ import (
 	"cholobangladesh-server/internal/modules/review/dto"
 	"cholobangladesh-server/internal/shared/web"
 	"cholobangladesh-server/pkg/imageutil"
-	"cholobangladesh-server/pkg/response"
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/validation"
 
 	"github.com/google/uuid"
@@ -94,13 +94,12 @@ func (s *Service) Create(ctx context.Context, userID, bookingID uuid.UUID, in Cr
 }
 
 func (s *Service) List(ctx context.Context, q dto.ReviewQuery, includeHidden bool) (*dto.ReviewList, error) {
-	page, limit := web.Paging(q.Page, q.Limit, 10, 50)
-	f := domain.Filter{WithPhotos: q.WithPhotos, IncludeHide: includeHidden, Sort: q.Sort, Page: page, Limit: limit}
+	f := domain.Filter{WithPhotos: q.WithPhotos, IncludeHide: includeHidden, Rating: q.Rating, Params: q.Params}
 	f.GigID, _ = uuid.Parse(q.GigID)
 	f.GuideID, _ = uuid.Parse(q.GuideID)
 	f.SpotID, _ = uuid.Parse(q.SpotID)
 
-	list, total, err := s.repo.List(ctx, f)
+	res, err := s.repo.List(ctx, f)
 	if err != nil {
 		return nil, err
 	}
@@ -108,16 +107,13 @@ func (s *Service) List(ctx context.Context, q dto.ReviewQuery, includeHidden boo
 	if err != nil {
 		return nil, err
 	}
-	items := make([]dto.ReviewResponse, 0, len(list))
-	for i := range list {
-		items = append(items, toReview(&list[i]))
-	}
+	pg := listing.Map(res, toReview)
 	stars := map[string]int64{}
 	for k, v := range sum.Stars {
 		stars[strconv.Itoa(k)] = v
 	}
 	return &dto.ReviewList{Summary: dto.Summary{Average: sum.Average, Count: sum.Count, Stars: stars},
-		Reviews: dto.ReviewPage{Items: items, Meta: response.NewPage(items, page, limit, total).Meta}}, nil
+		Reviews: dto.ReviewPage{Items: pg.Items, Meta: pg.Meta}}, nil
 }
 
 // Reply lets the reviewed guide answer once.

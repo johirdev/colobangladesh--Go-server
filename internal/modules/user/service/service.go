@@ -3,6 +3,7 @@
 package service
 
 import (
+	"cholobangladesh-server/internal/shared"
 	"context"
 	"errors"
 	"log/slog"
@@ -47,6 +48,7 @@ type Deps struct {
 	SMS      domain.SMSSender
 	Storage  domain.FileStorage // nil when Cloudinary is not configured
 	Identity domain.IdentityVerifier
+	Notify   shared.Notifier // in-app + realtime notifications (never nil)
 }
 
 type Service struct {
@@ -159,14 +161,4 @@ func notFound(err error, as *apperror.Error) error {
 		return as
 	}
 	return err
-}
-
-func pageDefaults(page, limit, def int) (int, int) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 {
-		limit = def
-	}
-	return page, limit
 }

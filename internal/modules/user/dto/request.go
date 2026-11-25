@@ -2,6 +2,8 @@
 // These are exactly what the frontend sends and receives.
 package dto
 
+import "cholobangladesh-server/pkg/listing"
+
 // ============================================================== registration
 
 // EmailOTPRequest starts tourist sign-up (step 1).
@@ -34,6 +36,16 @@ type CompleteUserRegistrationRequest struct {
 	Password          *string `json:"password" binding:"omitempty,strong_password" example:"Travel2026!"`
 	CountryCode       *string `json:"country_code" binding:"omitempty,country" example:"GB"`
 	PreferredLanguage *string `json:"preferred_language" binding:"omitempty,lang" example:"en"`
+}
+
+// CompleteLocalUserRegistrationRequest creates a Bangladeshi tourist account (phone sign-up, step 3).
+// Country is set to BD automatically. Password is optional (OTP login by SMS works without it).
+type CompleteLocalUserRegistrationRequest struct {
+	RegistrationToken string  `json:"registration_token" binding:"required,min=20,max=200" example:"q4Zr8...registration-token"`
+	FullName          string  `json:"full_name" binding:"required,min=2,max=100,person_name" example:"Tanvir Ahmed"`
+	Password          *string `json:"password" binding:"omitempty,strong_password" example:"Travel2026!"`
+	City              *string `json:"city" binding:"omitempty,max=100" example:"Chattogram"`
+	PreferredLanguage *string `json:"preferred_language" binding:"omitempty,lang" example:"bn"`
 }
 
 // CompleteGuideRegistrationRequest creates the guide account (step 3). Password is required.
@@ -129,26 +141,24 @@ type AvailabilityRequest struct {
 }
 
 // GuideSearchQuery — public guide discovery filters.
+// GuideSearchQuery — ?page ?limit (max 50) ?q (name, headline)
+// ?sort=rating|experience|price_low|price_high|newest (default rating).
 type GuideSearchQuery struct {
+	listing.Params
 	Area      string `form:"area" binding:"omitempty,max=60,slug" example:"sylhet"`
 	Language  string `form:"language" binding:"omitempty,lang" example:"en"`
 	Specialty string `form:"specialty" binding:"omitempty,max=40,slug" example:"tea_garden"`
 	MinRate   *int   `form:"min_rate" binding:"omitempty,gte=0" example:"300"`
 	MaxRate   *int   `form:"max_rate" binding:"omitempty,gte=0" example:"2000"`
-	Q         string `form:"q" binding:"omitempty,max=100" example:"rahim"`
-	Sort      string `form:"sort" binding:"omitempty,oneof=rating experience price_low price_high newest" example:"rating"`
-	Page      int    `form:"page" binding:"omitempty,gte=1,lte=1000" example:"1"`
-	Limit     int    `form:"limit" binding:"omitempty,gte=1,lte=50" example:"20"`
 }
 
 // ============================================================== admin
 
+// AdminUserQuery — ?page ?limit ?q (email, phone, name) ?sort=newest|oldest|name|login.
 type AdminUserQuery struct {
+	listing.Params
 	Role   string `form:"role" binding:"omitempty,oneof=user guide admin moderator" example:"guide"`
 	Status string `form:"status" binding:"omitempty,oneof=active suspended deleted" example:"active"`
-	Q      string `form:"q" binding:"omitempty,max=100" example:"rahim"`
-	Page   int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit  int    `form:"limit" binding:"omitempty,gte=1,lte=100" example:"20"`
 }
 
 type UpdateUserStatusRequest struct {
@@ -156,10 +166,10 @@ type UpdateUserStatusRequest struct {
 	Reason string `json:"reason" binding:"omitempty,max=500" example:"Multiple fraud reports"`
 }
 
+// VerificationQuery — ?page ?limit ?q (guide name, phone, email) ?sort=oldest|newest (default oldest).
 type VerificationQuery struct {
+	listing.Params
 	Status string `form:"status" binding:"omitempty,oneof=pending approved rejected" example:"pending"`
-	Page   int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit  int    `form:"limit" binding:"omitempty,gte=1,lte=100" example:"20"`
 }
 
 type RejectVerificationRequest struct {

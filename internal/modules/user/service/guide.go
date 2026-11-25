@@ -1,6 +1,8 @@
 package service
 
 import (
+	"cholobangladesh-server/internal/shared"
+	"cholobangladesh-server/pkg/listing"
 	"context"
 	"errors"
 	"log/slog"
@@ -172,6 +174,9 @@ func (s *Service) SubmitVerification(ctx context.Context, userID uuid.UUID, in K
 		return nil, err
 	}
 	s.audit(ctx, &userID, &userID, domain.EventKYCSubmitted, meta, map[string]any{"verification_id": v.ID})
+	s.Notify.NotifyRole(ctx, shared.RoleAdmin, shared.Notification{Type: "kyc.submitted", Title: "Guide verification to review",
+		Body: "A guide submitted NID and selfie for verification.", Link: "/admin/verifications/" + v.ID.String(),
+		Data: map[string]any{"verification_id": v.ID.String(), "user_id": userID.String()}})
 	return toVerificationStatus(v), nil
 }
 
@@ -186,21 +191,15 @@ func (s *Service) GetMyVerification(ctx context.Context, userID uuid.UUID) (*dto
 // ------------------------------------------------------------------ public discovery
 
 func (s *Service) SearchGuides(ctx context.Context, q dto.GuideSearchQuery) (response.Page[dto.PublicGuideResponse], error) {
-	page, limit := pageDefaults(q.Page, q.Limit, 20)
-	users, total, err := s.Repo.SearchGuides(ctx, domain.GuideFilter{
+	res, err := s.Repo.SearchGuides(ctx, domain.GuideFilter{
 		Area: strings.ToLower(q.Area), Language: q.Language, Specialty: strings.ToLower(q.Specialty),
-		MinRate: q.MinRate, MaxRate: q.MaxRate, Query: q.Q, Sort: q.Sort, Page: page, Limit: limit,
+		MinRate: q.MinRate, MaxRate: q.MaxRate, Params: q.Params,
 	})
 	if err != nil {
 		return response.Page[dto.PublicGuideResponse]{}, err
 	}
-	items := make([]dto.PublicGuideResponse, 0, len(users))
-	for i := range users {
-		if users[i].Profile != nil && users[i].GuideProfile != nil {
-			items = append(items, toPublicGuide(&users[i], false))
-		}
-	}
-	return response.NewPage(items, page, limit, total), nil
+	// The JOINs guarantee both profiles exist, so every row maps.
+	return listing.Map(res, func(u *domain.User) dto.PublicGuideResponse { return toPublicGuide(u, false) }), nil
 }
 
 func (s *Service) GetPublicGuide(ctx context.Context, id uuid.UUID) (*dto.PublicGuideResponse, error) {

@@ -40,11 +40,15 @@ type ErrorResponse struct {
 	RequestID string    `json:"request_id" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
 }
 
+// PageMeta is the same on every paginated endpoint.
 type PageMeta struct {
-	Page       int   `json:"page" example:"1"`
-	Limit      int   `json:"limit" example:"20"`
-	Total      int64 `json:"total" example:"57"`
-	TotalPages int   `json:"total_pages" example:"3"`
+	Page       int    `json:"page" example:"1"`
+	Limit      int    `json:"limit" example:"20"`
+	Total      int64  `json:"total" example:"57"`
+	TotalPages int    `json:"total_pages" example:"3"`
+	HasNext    bool   `json:"has_next" example:"true"`
+	HasPrev    bool   `json:"has_prev" example:"false"`
+	Sort       string `json:"sort,omitempty" example:"newest"` // the sort that was applied
 }
 
 type Page[T any] struct {
@@ -60,7 +64,8 @@ func NewPage[T any](items []T, page, limit int, total int64) Page[T] {
 	if limit > 0 {
 		pages = int(math.Ceil(float64(total) / float64(limit)))
 	}
-	return Page[T]{Items: items, Meta: PageMeta{Page: page, Limit: limit, Total: total, TotalPages: pages}}
+	return Page[T]{Items: items, Meta: PageMeta{Page: page, Limit: limit, Total: total, TotalPages: pages,
+		HasNext: page < pages, HasPrev: page > 1}}
 }
 
 const RequestIDKey = "request_id"

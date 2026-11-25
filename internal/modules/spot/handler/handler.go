@@ -112,8 +112,46 @@ func (h *Handler) ManageList(c *gin.Context) {
 	if !web.BindQuery(c, &q) {
 		return
 	}
-	res, err := h.svc.List(c.Request.Context(), q.SpotQuery, q.Status)
+	res, err := h.svc.ManageList(c.Request.Context(), q)
 	reply(c, http.StatusOK, "", res, err)
+}
+
+// Stats godoc
+//
+//	@Summary		Content studio counters
+//	@Description	Spot counts by status, featured, "needs work" (no photos / no videos / no map coordinates),
+//	@Description	spots with guide gigs, districts covered by published spots and spots per category.
+//	@Tags			12. Manage · Tourist spots
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Success		200	{object}	response.Body{data=dto.SpotStats}
+//	@Router			/manage/tourist-spots/stats [get]
+func (h *Handler) Stats(c *gin.Context) {
+	res, err := h.svc.Stats(c.Request.Context())
+	reply(c, http.StatusOK, "", res, err)
+}
+
+// Bulk godoc
+//
+//	@Summary		Bulk action on tourist spots
+//	@Description	Apply one action to 1-100 spots: publish, unpublish (back to draft), archive, feature, unfeature
+//	@Description	or delete. Spots that cannot take the action are listed in data.skipped (SPOT_NOT_FOUND,
+//	@Description	SPOT_HAS_ACTIVE_GIGS for delete) — the rest are still changed.
+//	@Tags			12. Manage · Tourist spots
+//	@Accept			json
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			body	body		dto.BulkSpotRequest	true	"IDs + action"
+//	@Success		200		{object}	response.Body{data=dto.BulkSpotResponse}
+//	@Failure		422		{object}	response.ErrorResponse	"VALIDATION_ERROR"
+//	@Router			/manage/tourist-spots/bulk [post]
+func (h *Handler) Bulk(c *gin.Context) {
+	var req dto.BulkSpotRequest
+	if !web.BindJSON(c, &req) {
+		return
+	}
+	res, err := h.svc.Bulk(c.Request.Context(), web.UserID(c), req)
+	reply(c, http.StatusOK, "bulk action applied", res, err)
 }
 
 // ManageGet godoc

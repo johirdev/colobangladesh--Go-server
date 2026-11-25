@@ -7,6 +7,7 @@ import (
 
 	"cholobangladesh-server/internal/modules/spot/domain"
 	"cholobangladesh-server/internal/shared/web"
+	"cholobangladesh-server/pkg/listing"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -19,53 +20,47 @@ func NewPostgres(db *gorm.DB) domain.Repository { return &postgres{db: db} }
 
 func (r *postgres) q(ctx context.Context) *gorm.DB { return r.db.WithContext(ctx) }
 
-var sorts = map[string]string{
-	"popular": "tourist_spots.is_featured DESC, tourist_spots.gig_count DESC, tourist_spots.rating_count DESC",
-	"rating":  "tourist_spots.rating_avg DESC, tourist_spots.rating_count DESC",
-	"newest":  "tourist_spots.created_at DESC",
-	"title":   "tourist_spots.title ASC",
+// ListSpec: ?sort= values and the columns ?q= searches.
+var ListSpec = listing.Spec{
+	Sorts: map[string]string{
+		"popular": "tourist_spots.is_featured DESC, tourist_spots.gig_count DESC, tourist_spots.rating_count DESC",
+		"rating":  "tourist_spots.rating_avg DESC, tourist_spots.rating_count DESC",
+		"newest":  "tourist_spots.created_at DESC",
+		"title":   "tourist_spots.title ASC",
+		"updated": "tourist_spots.updated_at DESC",
+	},
+	DefaultSort: "popular",
+	Tiebreak:    "tourist_spots.id",
+	Search:      []string{"tourist_spots.title", "tourist_spots.bn_title", "tourist_spots.location_name"},
 }
 
-func (r *postgres) List(ctx context.Context, f domain.Filter) ([]domain.Spot, int64, error) {
-	q := r.q(ctx).Model(&domain.Spot{})
-	if f.Status != "" {
-		q = q.Where("tourist_spots.status = ?", f.Status)
-	}
-	if f.DivisionID > 0 {
-		q = q.Where("tourist_spots.division_id = ?", f.DivisionID)
-	}
-	if f.DistrictID > 0 {
+// missing narrows the staff listing to spots that still need work.
+var missing = map[string]string{
+	"images":      "NOT EXISTS (SELECT 1 FROM tourist_spot_images i WHERE i.spot_id = tourist_spots.id)",
+	"videos":      "NOT EXISTS (SELECT 1 FROM tourist_spot_videos v WHERE v.spot_id = tourist_spots.id)",
+	"coordinates": "(tourist_spots.latitude IS NULL OR tourist_spots.longitude IS NULL)",
+}
+
+func (r *postgres) List(ctx context.Context, f domain.Filter) (listing.Result[domain.Spot], error) {
+	q := listing.Filter(r.q(ctx).Model(&domain.Spot{})).
+		Eq("tourist_spots.status", f.Status).
+		Eq("tourist_spots.division_id", f.DivisionID).
 		// primary district OR any linked upazila in that district (spots spanning districts)
-		q = q.Where(`(tourist_spots.district_id = ? OR EXISTS (SELECT 1 FROM tourist_spot_upazilas su
-			JOIN upazilas u ON u.id = su.upazila_id WHERE su.spot_id = tourist_spots.id AND u.district_id = ?))`,
-			f.DistrictID, f.DistrictID)
-	}
-	if f.UpazilaID > 0 {
-		q = q.Where("EXISTS (SELECT 1 FROM tourist_spot_upazilas su WHERE su.spot_id = tourist_spots.id AND su.upazila_id = ?)", f.UpazilaID)
-	}
-	if f.Category != "" {
-		q = q.Where("tourist_spots.category = ?", f.Category)
-	}
-	if f.Featured != nil {
-		q = q.Where("tourist_spots.is_featured = ?", *f.Featured)
-	}
-	if f.Query != "" {
-		p := web.Like(f.Query)
-		q = q.Where("(tourist_spots.title ILIKE ? OR tourist_spots.bn_title ILIKE ? OR tourist_spots.location_name ILIKE ?)", p, p, p)
-	}
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, 0, err
-	}
-	order, ok := sorts[f.Sort]
-	if !ok {
-		order = sorts["popular"]
-	}
-	var out []domain.Spot
-	err := q.Preload("Division").Preload("District").
-		Order(order).Order("tourist_spots.id").
-		Offset((f.Page - 1) * f.Limit).Limit(f.Limit).Find(&out).Error
-	return out, total, err
+		Where(`(tourist_spots.district_id = ? OR EXISTS (SELECT 1 FROM tourist_spot_upazilas su
+			JOIN upazilas u ON u.id = su.upazila_id WHERE su.spot_id = tourist_spots.id AND u.district_id = ?))`, f.DistrictID).
+		Where("EXISTS (SELECT 1 FROM tourist_spot_upazilas su WHERE su.spot_id = tourist_spots.id AND su.upazila_id = ?)", f.UpazilaID).
+		Eq("tourist_spots.category", f.Category).
+		Eq("tourist_spots.is_featured", f.Featured).
+		If(missing[f.Missing] != "", missing[f.Missing])
+
+	return listing.Find[domain.Spot](q, f.Params, ListSpec, func(db *gorm.DB) *gorm.DB {
+		if f.WithCounts {
+			db = db.Select(`tourist_spots.*,
+				(SELECT COUNT(*) FROM tourist_spot_images i WHERE i.spot_id = tourist_spots.id) AS image_count,
+				(SELECT COUNT(*) FROM tourist_spot_videos v WHERE v.spot_id = tourist_spots.id) AS video_count`)
+		}
+		return db.Preload("Division").Preload("District")
+	})
 }
 
 func (r *postgres) Markers(ctx context.Context, divisionID, districtID int) ([]domain.Marker, error) {
@@ -284,4 +279,59 @@ func (r *postgres) NearestUpazilas(ctx context.Context, lat, lng float64, distri
 	}}).
 		Limit(limit).Find(&out).Error
 	return out, err
+}
+
+// ================================================================== staff dashboard + bulk
+
+func (r *postgres) Stats(ctx context.Context) (*domain.Stats, error) {
+	var c struct {
+		Total, Published, Draft, Archived, Featured, MissingImages, MissingCoordinates, MissingVideos, WithGigs, DistrictsCovered, TotalDistricts int64
+	}
+	err := r.q(ctx).Raw(`SELECT
+		COUNT(*) AS total,
+		COUNT(*) FILTER (WHERE s.status = ?) AS published,
+		COUNT(*) FILTER (WHERE s.status = ?) AS draft,
+		COUNT(*) FILTER (WHERE s.status = ?) AS archived,
+		COUNT(*) FILTER (WHERE s.is_featured) AS featured,
+		COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM tourist_spot_images i WHERE i.spot_id = s.id)) AS missing_images,
+		COUNT(*) FILTER (WHERE s.latitude IS NULL OR s.longitude IS NULL) AS missing_coordinates,
+		COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM tourist_spot_videos v WHERE v.spot_id = s.id)) AS missing_videos,
+		COUNT(*) FILTER (WHERE s.gig_count > 0) AS with_gigs,
+		COUNT(DISTINCT s.district_id) FILTER (WHERE s.status = ?) AS districts_covered,
+		(SELECT COUNT(*) FROM districts) AS total_districts
+		FROM tourist_spots s WHERE s.deleted_at IS NULL`,
+		domain.StatusPublished, domain.StatusDraft, domain.StatusArchived, domain.StatusPublished).Scan(&c).Error
+	if err != nil {
+		return nil, err
+	}
+	st := domain.Stats{Total: c.Total, Published: c.Published, Draft: c.Draft, Archived: c.Archived, Featured: c.Featured,
+		MissingImages: c.MissingImages, MissingCoordinates: c.MissingCoordinates, MissingVideos: c.MissingVideos,
+		WithGigs: c.WithGigs, DistrictsCovered: c.DistrictsCovered, TotalDistricts: c.TotalDistricts}
+	err = r.q(ctx).Raw(`SELECT category, COUNT(*) AS count FROM tourist_spots
+		WHERE deleted_at IS NULL GROUP BY category ORDER BY count DESC, category`).Scan(&st.ByCategory).Error
+	return &st, err
+}
+
+func (r *postgres) Briefs(ctx context.Context, ids []uuid.UUID) ([]domain.Brief, error) {
+	var out []domain.Brief
+	err := r.q(ctx).Model(&domain.Spot{}).Select("id, title, status, gig_count").Where("id IN ?", ids).Scan(&out).Error
+	return out, err
+}
+
+func (r *postgres) BulkUpdate(ctx context.Context, ids []uuid.UUID, fields map[string]any) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	fields["updated_at"] = time.Now().UTC()
+	res := r.q(ctx).Model(&domain.Spot{}).Where("id IN ?", ids).Updates(fields)
+	return res.RowsAffected, res.Error
+}
+
+func (r *postgres) BulkSoftDelete(ctx context.Context, ids []uuid.UUID) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	// gig_count is re-checked in SQL so a gig created meanwhile still blocks the delete.
+	res := r.q(ctx).Where("id IN ? AND gig_count = 0", ids).Delete(&domain.Spot{})
+	return res.RowsAffected, res.Error
 }

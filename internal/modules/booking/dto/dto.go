@@ -4,14 +4,17 @@ package dto
 import (
 	"time"
 
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 )
 
 // ================================================================== requests
 
 type CreateBookingRequest struct {
-	GigID        string  `json:"gig_id" binding:"required,uuid" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
-	TourDate     string  `json:"tour_date" binding:"required,datetime=2006-01-02" example:"2026-12-20"`
+	GigID    string `json:"gig_id" binding:"required,uuid" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
+	TourDate string `json:"tour_date" binding:"required,datetime=2006-01-02" example:"2026-12-20"`
+	// EndDate of a multi-day tour (inclusive). Default: tour_date + the gig's duration in days - 1.
+	EndDate      *string `json:"end_date" binding:"omitempty,datetime=2006-01-02" example:"2026-12-22"`
 	StartTime    *string `json:"start_time" binding:"omitempty,datetime=15:04" example:"08:00"`
 	GroupSize    int     `json:"group_size" binding:"required,gte=1,lte=100" example:"4"`
 	Note         *string `json:"note" binding:"omitempty,max=1000" example:"Two kids in the group, we are vegetarian."`
@@ -22,11 +25,15 @@ type ReasonRequest struct {
 	Reason string `json:"reason" binding:"omitempty,max=500" example:"Fully booked on that date"`
 }
 
+// BookingQuery — ?page ?limit ?q (code, tourist / guide name, tour title)
+// ?sort=newest|oldest|tour_date|tour_date_desc|amount_high|amount_low (default newest).
 type BookingQuery struct {
+	listing.Params
 	Status        string `form:"status" binding:"omitempty,oneof=pending accepted rejected cancelled completed" example:"pending"`
 	PaymentStatus string `form:"payment_status" binding:"omitempty,oneof=unpaid submitted paid refunded" example:"unpaid"`
-	Page          int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit         int    `form:"limit" binding:"omitempty,gte=1,lte=100" example:"20"`
+	// From / To filter by tour dates (bookings overlapping the range). Used by the guide schedule.
+	From string `form:"from" binding:"omitempty,datetime=2006-01-02" example:"2026-12-01"`
+	To   string `form:"to" binding:"omitempty,datetime=2006-01-02" example:"2026-12-31"`
 }
 
 // SubmitPaymentRequest: the tourist sends money to one of GET /payment-methods (e.g. bKash
@@ -58,11 +65,11 @@ type PaymentMethodPatch struct {
 	Position      *int    `json:"position" binding:"omitempty,gte=0,lte=100"`
 }
 
+// PaymentQuery — ?page ?limit ?q (TrxID, sender number, booking code) ?sort=newest|oldest|amount_high|amount_low.
 type PaymentQuery struct {
+	listing.Params
 	Status   string `form:"status" binding:"omitempty,oneof=pending verified rejected" example:"pending"`
 	Provider string `form:"provider" binding:"omitempty,oneof=bkash nagad rocket upay bank" example:"bkash"`
-	Page     int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit    int    `form:"limit" binding:"omitempty,gte=1,lte=100" example:"20"`
 }
 
 type ReviewPaymentRequest struct {
@@ -72,9 +79,12 @@ type ReviewPaymentRequest struct {
 // ================================================================== responses
 
 type PersonRef struct {
-	ID        string  `json:"id" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
-	FullName  string  `json:"full_name" example:"Rahim Uddin"`
-	AvatarURL *string `json:"avatar_url,omitempty"`
+	ID          string  `json:"id" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
+	FullName    string  `json:"full_name" example:"Rahim Uddin"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
+	CountryCode *string `json:"country_code,omitempty" example:"GB"`
+	// Role is set on chat senders: "system" for CholoBangladesh notes.
+	Role string `json:"role,omitempty" example:"system"`
 }
 
 // Contact is shared between tourist and guide only after the guide accepts.
@@ -105,6 +115,8 @@ type BookingResponse struct {
 	Status         string       `json:"status" example:"pending" enums:"pending,accepted,rejected,cancelled,completed"`
 	PaymentStatus  string       `json:"payment_status" example:"unpaid" enums:"unpaid,submitted,paid,refunded"`
 	TourDate       string       `json:"tour_date" example:"2026-12-20"`
+	EndDate        string       `json:"end_date" example:"2026-12-22"`
+	Days           int          `json:"days" example:"3"`
 	StartTime      *string      `json:"start_time,omitempty" example:"08:00"`
 	GroupSize      int          `json:"group_size" example:"4"`
 	PricingType    string       `json:"pricing_type" example:"per_group"`
@@ -120,17 +132,25 @@ type BookingResponse struct {
 	GuideContact   *Contact     `json:"guide_contact,omitempty"`   // visible to the tourist once accepted
 	TouristContact *Contact     `json:"tourist_contact,omitempty"` // visible to the guide once accepted
 	// Actions the current user may take — drive the buttons from these.
-	CanAccept   bool       `json:"can_accept" example:"false"`
-	CanReject   bool       `json:"can_reject" example:"false"`
-	CanCancel   bool       `json:"can_cancel" example:"true"`
-	CanComplete bool       `json:"can_complete" example:"false"`
-	CanPay      bool       `json:"can_pay" example:"false"`
-	CanReview   bool       `json:"can_review" example:"false"`
-	HasReview   bool       `json:"has_review" example:"false"`
-	AcceptedAt  *time.Time `json:"accepted_at,omitempty"`
-	CompletedAt *time.Time `json:"completed_at,omitempty"`
-	CancelledAt *time.Time `json:"cancelled_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
+	CanAccept bool `json:"can_accept" example:"false"`
+	CanReject bool `json:"can_reject" example:"false"`
+	CanCancel bool `json:"can_cancel" example:"true"`
+	// CanComplete: tourist confirms the tour is done (paid, on/after tour_date) — or an admin after end_date.
+	CanComplete bool `json:"can_complete" example:"false"`
+	CanPay      bool `json:"can_pay" example:"false"` // accepted + unpaid (tourist)
+	CanReview   bool `json:"can_review" example:"false"`
+	CanChat     bool `json:"can_chat" example:"false"`      // paid: tourist <-> guide messages
+	CanEditPlan bool `json:"can_edit_plan" example:"false"` // paid & not finished: trip plan editable
+	HasReview   bool `json:"has_review" example:"false"`
+	HasPlan     bool `json:"has_plan" example:"false"`
+	// CompletedBy: "tourist" or "admin".
+	CompletedBy    string     `json:"completed_by,omitempty" example:"tourist"`
+	CompletionNote *string    `json:"completion_note,omitempty"`
+	AcceptedAt     *time.Time `json:"accepted_at,omitempty"`
+	PaidAt         *time.Time `json:"paid_at,omitempty"`
+	CompletedAt    *time.Time `json:"completed_at,omitempty"`
+	CancelledAt    *time.Time `json:"cancelled_at,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 // BookingPage documents response.Page[BookingResponse] for swagger.

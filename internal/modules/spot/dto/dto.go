@@ -4,6 +4,7 @@ package dto
 import (
 	"time"
 
+	"cholobangladesh-server/pkg/listing"
 	"cholobangladesh-server/pkg/response"
 )
 
@@ -69,22 +70,32 @@ type UpdateSpotRequest struct {
 	IsFeatured      *bool         `json:"is_featured" example:"false"`
 }
 
+// SpotQuery — ?page ?limit ?q (title, বাংলা title, location) and
+// ?sort=popular|rating|newest|title|updated (default popular) come from listing.Params.
 type SpotQuery struct {
+	listing.Params
 	DivisionID int    `form:"division_id" binding:"omitempty,gte=1" example:"1"`
 	DistrictID int    `form:"district_id" binding:"omitempty,gte=1" example:"9"`
 	UpazilaID  int    `form:"upazila_id" binding:"omitempty,gte=1" example:"75"`
 	Category   string `form:"category" binding:"omitempty,oneof=beach island hill forest waterfall lake river wetland heritage religious park city other" example:"beach"`
 	Featured   *bool  `form:"featured" example:"true"`
-	Q          string `form:"q" binding:"omitempty,max=100" example:"beach"`
-	Sort       string `form:"sort" binding:"omitempty,oneof=popular rating newest title" example:"popular"`
-	Page       int    `form:"page" binding:"omitempty,gte=1" example:"1"`
-	Limit      int    `form:"limit" binding:"omitempty,gte=1,lte=100" example:"20"`
 }
 
-// ManageSpotQuery adds the status filter (drafts/archived are visible to staff only).
+// ManageSpotQuery adds the staff-only filters: status (drafts/archived are visible to staff only)
+// and missing (spots that still need photos, videos or map coordinates).
 type ManageSpotQuery struct {
 	SpotQuery
-	Status string `form:"status" binding:"omitempty,oneof=draft published archived" example:"draft"`
+	Status  string `form:"status" binding:"omitempty,oneof=draft published archived" example:"draft"`
+	Missing string `form:"missing" binding:"omitempty,oneof=images coordinates videos" example:"images"`
+}
+
+// BulkSpotRequest applies one action to up to 100 spots:
+// publish | unpublish (back to draft) | archive | feature | unfeature | delete.
+// Spots that cannot take the action (not found, or delete while guides have gigs) are
+// reported in skipped; the rest are changed.
+type BulkSpotRequest struct {
+	IDs    []string `json:"ids" binding:"required,min=1,max=100,unique,dive,uuid" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
+	Action string   `json:"action" binding:"required,oneof=publish unpublish archive feature unfeature delete" example:"publish"`
 }
 
 type MarkerQuery struct {
@@ -153,6 +164,11 @@ type SpotCard struct {
 	GigCount      int      `json:"gig_count" example:"5"`
 	IsFeatured    bool     `json:"is_featured" example:"true"`
 	Status        string   `json:"status" example:"published"`
+	// Staff listing only (GET /manage/tourist-spots).
+	ImageCount *int      `json:"image_count,omitempty" example:"12"`
+	VideoCount *int      `json:"video_count,omitempty" example:"2"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type SpotDetail struct {
@@ -165,8 +181,6 @@ type SpotDetail struct {
 	Upazilas        []UpazilaRef    `json:"upazilas"`
 	Images          []ImageResponse `json:"images"`
 	Videos          []VideoResponse `json:"videos"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 // SpotPage documents response.Page[SpotCard] for swagger.
@@ -199,6 +213,42 @@ type OptionsResponse struct {
 	Statuses   []string `json:"statuses" example:"draft,published,archived"`
 	MaxImages  int      `json:"max_images" example:"50"`
 	MaxVideos  int      `json:"max_videos" example:"20"`
+}
+
+// SpotStats feeds the content studio header (counts exclude deleted spots).
+type SpotStats struct {
+	Total              int64           `json:"total" example:"42"`
+	Published          int64           `json:"published" example:"30"`
+	Draft              int64           `json:"draft" example:"10"`
+	Archived           int64           `json:"archived" example:"2"`
+	Featured           int64           `json:"featured" example:"8"`
+	MissingImages      int64           `json:"missing_images" example:"3"`
+	MissingCoordinates int64           `json:"missing_coordinates" example:"1"`
+	MissingVideos      int64           `json:"missing_videos" example:"12"`
+	WithGigs           int64           `json:"with_gigs" example:"18"`
+	DistrictsCovered   int64           `json:"districts_covered" example:"27"`
+	TotalDistricts     int64           `json:"total_districts" example:"64"`
+	ByCategory         []CategoryCount `json:"by_category"`
+}
+
+type CategoryCount struct {
+	Category string `json:"category" example:"beach"`
+	Count    int64  `json:"count" example:"6"`
+}
+
+type BulkSkipped struct {
+	ID      string `json:"id" example:"0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10"`
+	Title   string `json:"title,omitempty" example:"Sajek Valley"`
+	Code    string `json:"code" example:"SPOT_HAS_ACTIVE_GIGS"`
+	Message string `json:"message" example:"guides still offer tours for this spot; archive it instead of deleting"`
+}
+
+type BulkSpotResponse struct {
+	Action    string        `json:"action" example:"publish"`
+	Requested int           `json:"requested" example:"5"`
+	Affected  int64         `json:"affected" example:"4"`  // changed (or deleted)
+	Unchanged int           `json:"unchanged" example:"0"` // already in the requested status
+	Skipped   []BulkSkipped `json:"skipped"`
 }
 
 // AutofillResponse is a suggested CreateSpotRequest; review it, then POST it to /manage/tourist-spots.

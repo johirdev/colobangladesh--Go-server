@@ -1,5 +1,31 @@
 basePath: /api/v1
 definitions:
+  dto.AdminCancelRequest:
+    properties:
+      reason:
+        example: Guide fell ill, tourist refunded.
+        maxLength: 500
+        minLength: 5
+        type: string
+      refunded:
+        description: Refunded marks the payment as refunded (refund itself is done
+          in the aamarPay merchant panel).
+        example: true
+        type: boolean
+    required:
+    - reason
+    type: object
+  dto.AdminCompleteRequest:
+    properties:
+      note:
+        description: 'Note is required: what the admin confirmed with the guide.'
+        example: 'Called the guide: tour finished on 22 Dec, tourist unreachable.'
+        maxLength: 500
+        minLength: 5
+        type: string
+    required:
+    - note
+    type: object
   dto.AdminGigStatusRequest:
     properties:
       reason:
@@ -220,6 +246,30 @@ definitions:
     required:
     - is_available
     type: object
+  dto.BookedDatesResponse:
+    properties:
+      dates:
+        example:
+        - "2026-12-20"
+        - "2026-12-21"
+        - "2026-12-22"
+        items:
+          type: string
+        type: array
+      from:
+        example: "2026-12-01"
+        type: string
+      gig_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      ranges:
+        items:
+          $ref: '#/definitions/dto.BusyRange'
+        type: array
+      to:
+        example: "2027-03-01"
+        type: string
+    type: object
   dto.BookingGig:
     properties:
       duration_hours:
@@ -255,10 +305,21 @@ definitions:
       can_cancel:
         example: true
         type: boolean
+      can_chat:
+        description: 'paid: tourist <-> guide messages'
+        example: false
+        type: boolean
       can_complete:
+        description: 'CanComplete: tourist confirms the tour is done (paid, on/after
+          tour_date) — or an admin after end_date.'
+        example: false
+        type: boolean
+      can_edit_plan:
+        description: 'paid & not finished: trip plan editable'
         example: false
         type: boolean
       can_pay:
+        description: accepted + unpaid (tourist)
         example: false
         type: boolean
       can_reject:
@@ -274,10 +335,22 @@ definitions:
         type: string
       completed_at:
         type: string
+      completed_by:
+        description: 'CompletedBy: "tourist" or "admin".'
+        example: tourist
+        type: string
+      completion_note:
+        type: string
       created_at:
         type: string
       currency:
         example: BDT
+        type: string
+      days:
+        example: 3
+        type: integer
+      end_date:
+        example: "2026-12-22"
         type: string
       gig:
         $ref: '#/definitions/dto.BookingGig'
@@ -290,6 +363,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/dto.Contact'
         description: visible to the tourist once accepted
+      has_plan:
+        example: false
+        type: boolean
       has_review:
         example: false
         type: boolean
@@ -297,6 +373,8 @@ definitions:
         example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
         type: string
       note:
+        type: string
+      paid_at:
         type: string
       payment_status:
         enum:
@@ -358,6 +436,85 @@ definitions:
         example: Sundarbans
         type: string
     type: object
+  dto.BulkSkipped:
+    properties:
+      code:
+        example: SPOT_HAS_ACTIVE_GIGS
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      message:
+        example: guides still offer tours for this spot; archive it instead of deleting
+        type: string
+      title:
+        example: Sajek Valley
+        type: string
+    type: object
+  dto.BulkSpotRequest:
+    properties:
+      action:
+        enum:
+        - publish
+        - unpublish
+        - archive
+        - feature
+        - unfeature
+        - delete
+        example: publish
+        type: string
+      ids:
+        example:
+        - 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        items:
+          type: string
+        maxItems: 100
+        minItems: 1
+        type: array
+        uniqueItems: true
+    required:
+    - action
+    - ids
+    type: object
+  dto.BulkSpotResponse:
+    properties:
+      action:
+        example: publish
+        type: string
+      affected:
+        description: changed (or deleted)
+        example: 4
+        type: integer
+      requested:
+        example: 5
+        type: integer
+      skipped:
+        items:
+          $ref: '#/definitions/dto.BulkSkipped'
+        type: array
+      unchanged:
+        description: already in the requested status
+        example: 0
+        type: integer
+    type: object
+  dto.BusyRange:
+    properties:
+      end:
+        example: "2026-12-22"
+        type: string
+      start:
+        example: "2026-12-20"
+        type: string
+    type: object
+  dto.CategoryCount:
+    properties:
+      category:
+        example: beach
+        type: string
+      count:
+        example: 6
+        type: integer
+    type: object
   dto.ChangePasswordRequest:
     properties:
       current_password:
@@ -389,6 +546,39 @@ definitions:
     - full_name
     - password
     - registration_token
+    type: object
+  dto.CompleteLocalUserRegistrationRequest:
+    properties:
+      city:
+        example: Chattogram
+        maxLength: 100
+        type: string
+      full_name:
+        example: Tanvir Ahmed
+        maxLength: 100
+        minLength: 2
+        type: string
+      password:
+        example: Travel2026!
+        type: string
+      preferred_language:
+        example: bn
+        type: string
+      registration_token:
+        example: q4Zr8...registration-token
+        maxLength: 200
+        minLength: 20
+        type: string
+    required:
+    - full_name
+    - registration_token
+    type: object
+  dto.CompleteRequest:
+    properties:
+      note:
+        example: Great tour, everything as planned.
+        maxLength: 500
+        type: string
     type: object
   dto.CompleteUserRegistrationRequest:
     properties:
@@ -432,6 +622,11 @@ definitions:
       contact_phone:
         example: "+8801712345678"
         type: string
+      end_date:
+        description: 'EndDate of a multi-day tour (inclusive). Default: tour_date
+          + the gig''s duration in days - 1.'
+        example: "2026-12-22"
+        type: string
       gig_id:
         example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
         type: string
@@ -468,10 +663,6 @@ definitions:
         uniqueItems: true
       cancellation_policy:
         example: Free cancellation up to 48 hours before the tour.
-        maxLength: 1000
-        type: string
-      cover_image_url:
-        example: ""
         maxLength: 1000
         type: string
       description:
@@ -926,6 +1117,109 @@ definitions:
     - email
     - otp
     type: object
+  dto.GatewayEventResponse:
+    properties:
+      created_at:
+        type: string
+      event:
+        example: verified
+        type: string
+      ip:
+        type: string
+      payload:
+        additionalProperties: {}
+        type: object
+    type: object
+  dto.GatewayPaymentPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.GatewayPaymentResponse'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.GatewayPaymentResponse:
+    properties:
+      amount:
+        example: 6000
+        type: integer
+      bank_txn:
+        type: string
+      booking_code:
+        example: CB7K3D9QXA
+        type: string
+      booking_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      card_number:
+        type: string
+      created_at:
+        type: string
+      currency:
+        example: BDT
+        type: string
+      events:
+        description: admin detail only
+        items:
+          $ref: '#/definitions/dto.GatewayEventResponse'
+        type: array
+      failure_reason:
+        type: string
+      gateway:
+        example: aamarpay
+        type: string
+      gig_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      gig_title:
+        example: Full-day Sundarbans boat safari
+        type: string
+      guide:
+        $ref: '#/definitions/dto.PersonRef'
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      mode:
+        enum:
+        - sandbox
+        - live
+        example: sandbox
+        type: string
+      paid_amount:
+        example: 6000
+        type: number
+      payer:
+        $ref: '#/definitions/dto.PersonRef'
+      payment_type:
+        example: bKash-bKash
+        type: string
+      pg_txn_id:
+        example: AAM1702512345678
+        type: string
+      processing_charge:
+        example: 120
+        type: number
+      status:
+        enum:
+        - initiated
+        - success
+        - failed
+        - cancelled
+        - duplicate
+        example: success
+        type: string
+      store_amount:
+        example: 5880
+        type: number
+      tran_id:
+        example: CBP-01JF7Q2W8X3Y4Z5A6B7C8D9E0F
+        type: string
+      updated_at:
+        type: string
+      verified_at:
+        type: string
+    type: object
   dto.GeoRef:
     properties:
       bn_name:
@@ -968,7 +1262,7 @@ definitions:
         example: 15
         type: integer
       cover_image_url:
-        description: gig cover, falls back to the spot cover
+        description: first photo, falls back to the spot cover
         type: string
       created_at:
         type: string
@@ -989,6 +1283,11 @@ definitions:
       id:
         example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
         type: string
+      images:
+        description: gallery, cover first
+        items:
+          $ref: '#/definitions/internal_modules_gig_dto.ImageResponse'
+        type: array
       includes:
         items:
           type: string
@@ -1225,24 +1524,69 @@ definitions:
     required:
     - url
     type: object
-  dto.ImageResponse:
+  dto.Item:
     properties:
-      caption:
-        example: Boats at the jetty
+      body:
+        example: Rahim accepted your Sundarbans tour. Pay now to confirm.
         type: string
+      created_at:
+        type: string
+      data:
+        additionalProperties: {}
+        type: object
       id:
         example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
         type: string
-      source_url:
-        example: https://commons.wikimedia.org/wiki/File:Saint_Martins_Island.jpg
+      link:
+        example: /account/bookings/0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
         type: string
-      uploaded:
-        description: true = stored in our Cloudinary
+      read:
         example: false
         type: boolean
-      url:
-        example: https://thumb.wikimedia.org/.../1280px-Saint_Martins_Island.jpg
+      title:
+        example: Booking accepted
         type: string
+      type:
+        example: booking.accepted
+        type: string
+    type: object
+  dto.ItemPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.Item'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.ItineraryItem:
+    properties:
+      date:
+        example: "2026-12-20"
+        type: string
+      map_url:
+        example: https://maps.app.goo.gl/xyz
+        maxLength: 1000
+        type: string
+      note:
+        example: Bring sunscreen
+        maxLength: 500
+        type: string
+      place:
+        example: Mongla ferry ghat
+        maxLength: 200
+        type: string
+      time:
+        example: "09:00"
+        type: string
+      title:
+        example: Boat leaves Mongla for Harbaria
+        maxLength: 150
+        minLength: 2
+        type: string
+    required:
+    - date
+    - title
     type: object
   dto.LoginRequest:
     properties:
@@ -1360,6 +1704,43 @@ definitions:
         example: active
         type: string
     type: object
+  dto.MessageRequest:
+    properties:
+      body:
+        example: Hi! We land at 6:30 pm, see you at the bus stand.
+        maxLength: 2000
+        minLength: 1
+        type: string
+    required:
+    - body
+    type: object
+  dto.MessageResponse:
+    properties:
+      body:
+        example: See you tomorrow!
+        type: string
+      booking_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      created_at:
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      kind:
+        enum:
+        - user
+        - system
+        example: user
+        type: string
+      mine:
+        example: true
+        type: boolean
+      read_at:
+        type: string
+      sender:
+        $ref: '#/definitions/dto.PersonRef'
+    type: object
   dto.MyGigsResponse:
     properties:
       items:
@@ -1474,6 +1855,25 @@ definitions:
       total_pages:
         example: 3
         type: integer
+    type: object
+  dto.PayOnlineResponse:
+    properties:
+      amount:
+        example: 6000
+        type: integer
+      currency:
+        example: BDT
+        type: string
+      payment_url:
+        description: Redirect the browser here (aamarPay hosted payment page).
+        example: https://sandbox.aamarpay.com/paynow.php?track=AAM123
+        type: string
+      sandbox:
+        example: true
+        type: boolean
+      tran_id:
+        example: CBP-01JF7Q2W8X3Y4Z5A6B7C8D9E0F
+        type: string
     type: object
   dto.PaymentMethodPatch:
     properties:
@@ -1652,11 +2052,18 @@ definitions:
     properties:
       avatar_url:
         type: string
+      country_code:
+        example: GB
+        type: string
       full_name:
         example: Rahim Uddin
         type: string
       id:
         example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      role:
+        description: 'Role is set on chat senders: "system" for CholoBangladesh notes.'
+        example: system
         type: string
     type: object
   dto.PhoneOTPRequest:
@@ -1972,6 +2379,8 @@ definitions:
         type: string
       cover_image_url:
         type: string
+      created_at:
+        type: string
       district:
         $ref: '#/definitions/dto.GeoRef'
       division:
@@ -1982,6 +2391,10 @@ definitions:
       id:
         example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
         type: string
+      image_count:
+        description: Staff listing only (GET /manage/tourist-spots).
+        example: 12
+        type: integer
       is_featured:
         example: true
         type: boolean
@@ -2012,6 +2425,11 @@ definitions:
       title:
         example: Saint Martin's Island
         type: string
+      updated_at:
+        type: string
+      video_count:
+        example: 2
+        type: integer
     type: object
   dto.SpotDetail:
     properties:
@@ -2046,9 +2464,13 @@ definitions:
       id:
         example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
         type: string
+      image_count:
+        description: Staff listing only (GET /manage/tourist-spots).
+        example: 12
+        type: integer
       images:
         items:
-          $ref: '#/definitions/dto.ImageResponse'
+          $ref: '#/definitions/internal_modules_spot_dto.ImageResponse'
         type: array
       is_featured:
         example: true
@@ -2088,6 +2510,9 @@ definitions:
         type: array
       updated_at:
         type: string
+      video_count:
+        example: 2
+        type: integer
       videos:
         items:
           $ref: '#/definitions/dto.VideoResponse'
@@ -2131,6 +2556,46 @@ definitions:
         example: Sundarbans
         type: string
     type: object
+  dto.SpotStats:
+    properties:
+      archived:
+        example: 2
+        type: integer
+      by_category:
+        items:
+          $ref: '#/definitions/dto.CategoryCount'
+        type: array
+      districts_covered:
+        example: 27
+        type: integer
+      draft:
+        example: 10
+        type: integer
+      featured:
+        example: 8
+        type: integer
+      missing_coordinates:
+        example: 1
+        type: integer
+      missing_images:
+        example: 3
+        type: integer
+      missing_videos:
+        example: 12
+        type: integer
+      published:
+        example: 30
+        type: integer
+      total:
+        example: 42
+        type: integer
+      total_districts:
+        example: 64
+        type: integer
+      with_gigs:
+        example: 18
+        type: integer
+    type: object
   dto.SubmitPaymentRequest:
     properties:
       amount:
@@ -2168,6 +2633,18 @@ definitions:
           type: integer
         description: '"1".."5" -> count'
         type: object
+    type: object
+  dto.Ticket:
+    properties:
+      expires_in:
+        example: 60
+        type: integer
+      path:
+        example: /socket.io/
+        type: string
+      ticket:
+        example: pX2...one-time-ticket
+        type: string
     type: object
   dto.TreeDistrict:
     properties:
@@ -2224,6 +2701,131 @@ definitions:
       type:
         example: upazila
         type: string
+    type: object
+  dto.TripPlanAdminItem:
+    properties:
+      booking:
+        $ref: '#/definitions/dto.BookingResponse'
+      plan:
+        $ref: '#/definitions/dto.TripPlanResponse'
+    type: object
+  dto.TripPlanPage:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/dto.TripPlanAdminItem'
+        type: array
+      meta:
+        $ref: '#/definitions/response.PageMeta'
+    type: object
+  dto.TripPlanRequest:
+    properties:
+      arrival_at:
+        description: When the tourist arrives (RFC3339).
+        example: "2026-12-19T18:30:00+06:00"
+        type: string
+      arrival_from:
+        example: Dhaka (Sayedabad bus terminal)
+        maxLength: 200
+        type: string
+      arrival_mode:
+        enum:
+        - bus
+        - train
+        - air
+        - car
+        - launch
+        - other
+        example: bus
+        type: string
+      hotel_check_in:
+        example: "2026-12-19"
+        type: string
+      hotel_check_out:
+        example: "2026-12-22"
+        type: string
+      hotel_map_url:
+        example: https://maps.app.goo.gl/def
+        maxLength: 1000
+        type: string
+      hotel_name:
+        example: Hotel Castle Salam, Khulna
+        maxLength: 200
+        type: string
+      itinerary:
+        items:
+          $ref: '#/definitions/dto.ItineraryItem'
+        maxItems: 60
+        type: array
+      notes:
+        example: Guide will wait with a CholoBangladesh sign.
+        maxLength: 2000
+        type: string
+      pickup_map_url:
+        example: https://maps.app.goo.gl/abc
+        maxLength: 1000
+        type: string
+      pickup_name:
+        example: Khulna Sonadanga bus stand
+        maxLength: 200
+        type: string
+    type: object
+  dto.TripPlanResponse:
+    properties:
+      arrival_at:
+        type: string
+      arrival_from:
+        type: string
+      arrival_mode:
+        type: string
+      booking_id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      can_edit:
+        example: true
+        type: boolean
+      exists:
+        example: true
+        type: boolean
+      hotel_check_in:
+        type: string
+      hotel_check_out:
+        type: string
+      hotel_map_url:
+        type: string
+      hotel_name:
+        type: string
+      itinerary:
+        items:
+          $ref: '#/definitions/dto.ItineraryItem'
+        type: array
+      notes:
+        type: string
+      pickup_map_url:
+        type: string
+      pickup_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        $ref: '#/definitions/dto.PersonRef'
+    type: object
+  dto.UnreadCount:
+    properties:
+      count:
+        example: 3
+        type: integer
+    type: object
+  dto.UnreadMessages:
+    properties:
+      bookings:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+      total:
+        example: 4
+        type: integer
     type: object
   dto.UpazilaPage:
     properties:
@@ -2375,9 +2977,6 @@ definitions:
       cancellation_policy:
         maxLength: 1000
         type: string
-      cover_image_url:
-        maxLength: 1000
-        type: string
       description:
         maxLength: 10000
         minLength: 50
@@ -2436,6 +3035,16 @@ definitions:
         maxLength: 150
         minLength: 10
         type: string
+    type: object
+  dto.UpdateImageRequest:
+    properties:
+      caption:
+        example: Sunset from the boat
+        maxLength: 300
+        type: string
+      cover:
+        example: true
+        type: boolean
     type: object
   dto.UpdateProfileRequest:
     properties:
@@ -2810,6 +3419,44 @@ definitions:
           $ref: '#/definitions/http.APIVersion'
         type: array
     type: object
+  internal_modules_gig_dto.ImageResponse:
+    properties:
+      caption:
+        example: Sunset from the boat
+        type: string
+      cover:
+        example: true
+        type: boolean
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      uploaded:
+        description: false = an old external URL
+        example: true
+        type: boolean
+      url:
+        example: https://res.cloudinary.com/.../gigs/....webp
+        type: string
+    type: object
+  internal_modules_spot_dto.ImageResponse:
+    properties:
+      caption:
+        example: Boats at the jetty
+        type: string
+      id:
+        example: 0193a0c4-9f7e-7c2a-a1d3-5f2b9c8e4d10
+        type: string
+      source_url:
+        example: https://commons.wikimedia.org/wiki/File:Saint_Martins_Island.jpg
+        type: string
+      uploaded:
+        description: true = stored in our Cloudinary
+        example: false
+        type: boolean
+      url:
+        example: https://thumb.wikimedia.org/.../1280px-Saint_Martins_Island.jpg
+        type: string
+    type: object
   meta.Country:
     properties:
       code:
@@ -2877,12 +3524,22 @@ definitions:
     type: object
   response.PageMeta:
     properties:
+      has_next:
+        example: true
+        type: boolean
+      has_prev:
+        example: false
+        type: boolean
       limit:
         example: 20
         type: integer
       page:
         example: 1
         type: integer
+      sort:
+        description: the sort that was applied
+        example: newest
+        type: string
       total:
         example: 57
         type: integer
@@ -2976,17 +3633,12 @@ paths:
   /admin/bookings:
     get:
       parameters:
-      - example: 20
+      - description: From / To filter by tour dates (bookings overlapping the range).
+          Used by the guide schedule.
+        example: "2026-12-01"
         in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
+        name: from
+        type: string
       - enum:
         - unpaid
         - submitted
@@ -3006,6 +3658,10 @@ paths:
         in: query
         name: status
         type: string
+      - example: "2026-12-31"
+        in: query
+        name: to
+        type: string
       produces:
       - application/json
       responses:
@@ -3021,6 +3677,83 @@ paths:
       security:
       - BearerAuth: []
       summary: All bookings
+      tags:
+      - 18. Admin · Marketplace
+  /admin/bookings/{id}/cancel:
+    post:
+      consumes:
+      - application/json
+      description: For paid bookings set `refunded=true` after refunding in the aamarPay
+        merchant panel.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Reason
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminCancelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel any pending/accepted booking (admin)
+      tags:
+      - 18. Admin · Marketplace
+  /admin/bookings/{id}/complete:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Only for paid bookings after the end date, once an admin has confirmed with the guide.
+        `note` (required) records what was confirmed.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Note
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.AdminCompleteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookingResponse'
+              type: object
+        "409":
+          description: TOUR_NOT_ENDED | BOOKING_NOT_PAID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Complete a tour on the tourist's behalf (admin)
       tags:
       - 18. Admin · Marketplace
   /admin/gigs:
@@ -3044,12 +3777,6 @@ paths:
         in: query
         name: language
         type: string
-      - example: 20
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
       - example: 10000
         in: query
         minimum: 0
@@ -3060,26 +3787,6 @@ paths:
         minimum: 0
         name: min_price
         type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - example: boat
-        in: query
-        maxLength: 100
-        name: q
-        type: string
-      - enum:
-        - rating
-        - price_low
-        - price_high
-        - newest
-        - popular
-        example: rating
-        in: query
-        name: sort
-        type: string
       - example: ""
         in: query
         name: spot_id
@@ -3149,17 +3856,6 @@ paths:
       description: 'Oldest first. Default: all statuses; use `status=pending` for
         the queue.'
       parameters:
-      - example: 20
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
       - enum:
         - pending
         - approved
@@ -3418,17 +4114,6 @@ paths:
   /admin/payments:
     get:
       parameters:
-      - example: 20
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
       - enum:
         - bkash
         - nagad
@@ -3549,25 +4234,12 @@ paths:
         in: query
         name: guide_id
         type: string
-      - example: 10
+      - example: 5
         in: query
-        maximum: 50
+        maximum: 5
         minimum: 1
-        name: limit
+        name: rating
         type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - enum:
-        - newest
-        - highest
-        - lowest
-        example: newest
-        in: query
-        name: sort
-        type: string
       - example: ""
         in: query
         name: spot_id
@@ -3627,25 +4299,90 @@ paths:
       summary: Hide / show a review (ratings are recalculated)
       tags:
       - 18. Admin · Marketplace
+  /admin/transactions:
+    get:
+      description: Every checkout attempt with tourist, guide, gig, booking, amount,
+        gateway ids and status.
+      parameters:
+      - enum:
+        - initiated
+        - success
+        - failed
+        - cancelled
+        - duplicate
+        example: success
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GatewayPaymentPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Online payments (aamarPay transactions)
+      tags:
+      - 18. Admin · Marketplace
+  /admin/transactions/{tran_id}:
+    get:
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: tran_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GatewayPaymentResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Online payment detail with its audit trail (admin)
+      tags:
+      - 18. Admin · Marketplace
+  /admin/trip-plans:
+    get:
+      parameters:
+      - example: true
+        in: query
+        name: upcoming
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.TripPlanPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Trip plans monitor (admin)
+      tags:
+      - 18. Admin · Marketplace
   /admin/users:
     get:
       parameters:
-      - example: 20
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - example: rahim
-        in: query
-        maxLength: 100
-        name: q
-        type: string
       - enum:
         - user
         - guide
@@ -4307,6 +5044,113 @@ paths:
       summary: Tourist sign-up · Step 3 — create account
       tags:
       - 1. Auth · Tourist sign-up
+  /auth/register/user/phone/complete:
+    post:
+      consumes:
+      - application/json
+      description: Creates a tourist account with country = BD and logs in (returns
+        tokens).
+      parameters:
+      - description: Account details
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CompleteLocalUserRegistrationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.AuthResponse'
+              type: object
+        "400":
+          description: VERIFICATION_TOKEN_INVALID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "409":
+          description: PHONE_ALREADY_REGISTERED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Bangladeshi tourist sign-up · Step 3 — create account
+      tags:
+      - 1. Auth · Tourist sign-up
+  /auth/register/user/phone/send-otp:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        The sign-up screen first asks "Foreigner or Bangladeshi?". Foreigners use the email flow
+        (/auth/register/user/*); Bangladeshi tourists sign up with their BD mobile number here.
+      parameters:
+      - description: Cloudflare Turnstile token (when CAPTCHA_ENABLED)
+        in: header
+        name: X-Captcha-Token
+        type: string
+      - description: BD mobile number
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PhoneOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.OTPSentResponse'
+              type: object
+        "409":
+          description: PHONE_ALREADY_REGISTERED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "429":
+          description: OTP_COOLDOWN | OTP_LIMIT_REACHED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Bangladeshi tourist sign-up · Step 1 — send SMS OTP
+      tags:
+      - 1. Auth · Tourist sign-up
+  /auth/register/user/phone/verify-otp:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Phone + OTP
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.PhoneOTPVerifyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.VerificationTicketResponse'
+              type: object
+        "400":
+          description: OTP_INVALID | OTP_EXPIRED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      summary: Bangladeshi tourist sign-up · Step 2 — verify SMS OTP
+      tags:
+      - 1. Auth · Tourist sign-up
   /auth/register/user/send-otp:
     post:
       consumes:
@@ -4538,6 +5382,8 @@ paths:
     post:
       consumes:
       - application/json
+      description: Paid bookings can only be cancelled by an admin (POST /admin/bookings/{id}/cancel,
+        with refund).
       parameters:
       - description: Booking ID
         format: uuid
@@ -4563,18 +5409,22 @@ paths:
                   $ref: '#/definitions/dto.BookingResponse'
               type: object
         "409":
-          description: BOOKING_STATUS_CONFLICT
+          description: BOOKING_STATUS_CONFLICT | PAID_BOOKING_CANCEL
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Cancel a booking (tourist or guide, while pending/accepted)
+      summary: Cancel a booking (tourist or guide, while pending or accepted-but-unpaid)
       tags:
       - 15. Bookings
   /bookings/{id}/complete:
     post:
-      description: Allowed on/after the tour date. Opens payment and review for the
-        tourist.
+      consumes:
+      - application/json
+      description: |-
+        Only the tourist can confirm, once the booking is **paid** and on/after the tour start date.
+        If the tourist never confirms, an admin completes it after the end date
+        (POST /admin/bookings/{id}/complete) after talking to the guide. Opens the review.
       parameters:
       - description: Booking ID
         format: uuid
@@ -4582,6 +5432,11 @@ paths:
         name: id
         required: true
         type: string
+      - description: Optional note
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/dto.CompleteRequest'
       produces:
       - application/json
       responses:
@@ -4595,14 +5450,142 @@ paths:
                   $ref: '#/definitions/dto.BookingResponse'
               type: object
         "409":
-          description: BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED
+          description: BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED | BOOKING_NOT_PAID
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Mark the tour as completed (guide)
+      summary: Confirm the tour is completed (tourist only)
       tags:
       - 15. Bookings
+  /bookings/{id}/messages:
+    get:
+      description: |-
+        Opens once the booking is paid. Fetching marks the other side's messages as read.
+        New messages arrive live as `message:new`. Older pages: `?before=<created_at of the oldest>`.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: 'Before: RFC3339 created_at of the oldest message you have (older
+          page).'
+        example: "2026-12-19T10:00:00Z"
+        in: query
+        maxLength: 40
+        name: before
+        type: string
+      - example: 50
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.MessageResponse'
+                  type: array
+              type: object
+        "409":
+          description: CHAT_NOT_OPEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Chat messages of a booking (oldest → newest)
+      tags:
+      - 20. Trip plan & chat
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Message
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.MessageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.MessageResponse'
+              type: object
+        "409":
+          description: CHAT_NOT_OPEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Send a chat message (tourist or guide of a paid booking)
+      tags:
+      - 20. Trip plan & chat
+  /bookings/{id}/pay:
+    post:
+      description: |-
+        Allowed once the guide accepted (`can_pay`). Returns `payment_url`: redirect the browser there
+        (bKash, Nagad, Rocket, cards…). aamarPay sends the tourist back through
+        `/payments/aamarpay/return`, the API verifies the transaction server-to-server and redirects to
+        `FRONTEND_URL/account/bookings/{id}?payment=success|failed|cancelled|pending`.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.PayOnlineResponse'
+              type: object
+        "409":
+          description: PAYMENT_NOT_DUE | ALREADY_PAID
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "502":
+          description: PAYMENT_GATEWAY_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: PAYMENT_GATEWAY_DISABLED
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Pay online with aamarPay (tourist)
+      tags:
+      - 16. Payments
   /bookings/{id}/payments:
     get:
       parameters:
@@ -4635,7 +5618,7 @@ paths:
       consumes:
       - application/json
       description: |-
-        Only after the tour is completed (`can_pay`). `amount` must equal `total_amount`. The payment stays
+        Only after the guide accepts (`can_pay`). `amount` must equal `total_amount`. The payment stays
         `pending` until an admin verifies it; then the booking's `payment_status` becomes `paid`.
       parameters:
       - description: Booking ID
@@ -4672,9 +5655,78 @@ paths:
             $ref: '#/definitions/response.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Submit a mobile-banking payment for a completed tour
+      summary: 'Manual fallback: submit a mobile-banking payment for an accepted booking'
       tags:
       - 16. Payments
+  /bookings/{id}/plan:
+    get:
+      description: |-
+        Arrival, pickup point (Google Maps link), hotel and day-by-day itinerary. Tourist, guide and admins.
+        `exists=false` until someone saves it; `can_edit` once the booking is paid (until completed).
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.TripPlanResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Trip plan of a booking
+      tags:
+      - 20. Trip plan & chat
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replaces the whole plan. Map links must be http(s) (e.g. Google Maps share links).
+        The other side and admins get a live `plan:updated` event.
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plan
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.TripPlanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.TripPlanResponse'
+              type: object
+        "409":
+          description: TRIP_PLAN_NOT_OPEN
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Save the trip plan (tourist or guide, after payment)
+      tags:
+      - 20. Trip plan & chat
   /bookings/{id}/reject:
     post:
       consumes:
@@ -4764,20 +5816,43 @@ paths:
       summary: Review a completed tour (with photos)
       tags:
       - 17. Reviews
+  /bookings/{id}/transactions:
+    get:
+      parameters:
+      - description: Booking ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/dto.GatewayPaymentResponse'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Online payment attempts of a booking
+      tags:
+      - 16. Payments
   /bookings/guide:
     get:
       parameters:
-      - example: 20
+      - description: From / To filter by tour dates (bookings overlapping the range).
+          Used by the guide schedule.
+        example: "2026-12-01"
         in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
+        name: from
+        type: string
       - enum:
         - unpaid
         - submitted
@@ -4796,6 +5871,10 @@ paths:
         example: pending
         in: query
         name: status
+        type: string
+      - example: "2026-12-31"
+        in: query
+        name: to
         type: string
       produces:
       - application/json
@@ -4817,17 +5896,12 @@ paths:
   /bookings/me:
     get:
       parameters:
-      - example: 20
+      - description: From / To filter by tour dates (bookings overlapping the range).
+          Used by the guide schedule.
+        example: "2026-12-01"
         in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
+        name: from
+        type: string
       - enum:
         - unpaid
         - submitted
@@ -4846,6 +5920,10 @@ paths:
         example: pending
         in: query
         name: status
+        type: string
+      - example: "2026-12-31"
+        in: query
+        name: to
         type: string
       produces:
       - application/json
@@ -5006,22 +6084,6 @@ paths:
         minimum: 1
         name: division_id
         type: integer
-      - example: 100
-        in: query
-        maximum: 600
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - example: tek
-        in: query
-        maxLength: 80
-        name: q
-        type: string
       - enum:
         - upazila
         - metro_thana
@@ -5095,12 +6157,6 @@ paths:
         in: query
         name: language
         type: string
-      - example: 20
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
       - example: 10000
         in: query
         minimum: 0
@@ -5111,26 +6167,6 @@ paths:
         minimum: 0
         name: min_price
         type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - example: boat
-        in: query
-        maxLength: 100
-        name: q
-        type: string
-      - enum:
-        - rating
-        - price_low
-        - price_high
-        - newest
-        - popular
-        example: rating
-        in: query
-        name: sort
-        type: string
       - example: ""
         in: query
         name: spot_id
@@ -5176,6 +6212,41 @@ paths:
           schema:
             $ref: '#/definitions/response.ErrorResponse'
       summary: Gig details (with guide and spot)
+      tags:
+      - 14. Gigs · Public
+  /gigs/{id}/booked-dates:
+    get:
+      description: |-
+        Days the guide is already booked (accepted tours of ANY of their gigs), so the date picker can
+        grey them out. Default range: today → +6 months. No personal data.
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - example: "2026-12-01"
+        in: query
+        name: from
+        type: string
+      - example: "2027-03-01"
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BookedDatesResponse'
+              type: object
+      summary: Booked dates of a gig's guide (calendar slots)
       tags:
       - 14. Gigs · Public
   /gigs/me:
@@ -5343,6 +6414,178 @@ paths:
       summary: Update my gig (partial) — price, hours, group size, languages, status...
       tags:
       - 13. Guide · My gigs
+  /gigs/me/{id}/images:
+    post:
+      consumes:
+      - multipart/form-data
+      description: |-
+        multipart/form-data: repeat `images` for several files (JPEG/PNG/WEBP, max MAX_UPLOAD_SIZE_MB
+        each, min 400x400 — crop them in the browser first). Optional `captions` in the same order.
+        Max 12 photos per gig; the first photo is the cover.
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Photo (repeatable)
+        in: formData
+        name: images
+        required: true
+        type: file
+      - description: Caption for each photo (repeatable)
+        in: formData
+        name: captions
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "422":
+          description: INVALID_IMAGE | TOO_MANY_IMAGES
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+        "503":
+          description: UPLOAD_UNAVAILABLE
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload photos to my gig
+      tags:
+      - 13. Guide · My gigs
+  /gigs/me/{id}/images/{imageId}:
+    delete:
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Photo ID
+        format: uuid
+        in: path
+        name: imageId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "404":
+          description: IMAGE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete one photo of my gig
+      tags:
+      - 13. Guide · My gigs
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Photo ID
+        format: uuid
+        in: path
+        name: imageId
+        required: true
+        type: string
+      - description: Changes
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateImageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "404":
+          description: IMAGE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Edit a photo caption / make it the cover
+      tags:
+      - 13. Guide · My gigs
+    put:
+      consumes:
+      - multipart/form-data
+      description: multipart/form-data with one `image`. Position and caption stay
+        the same.
+      parameters:
+      - description: Gig ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Photo ID
+        format: uuid
+        in: path
+        name: imageId
+        required: true
+        type: string
+      - description: New photo
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GigResponse'
+              type: object
+        "404":
+          description: IMAGE_NOT_FOUND
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Replace one photo (e.g. after re-cropping)
+      tags:
+      - 13. Guide · My gigs
   /gigs/me/quota:
     get:
       produces:
@@ -5376,12 +6619,6 @@ paths:
         in: query
         name: language
         type: string
-      - example: 20
-        in: query
-        maximum: 50
-        minimum: 1
-        name: limit
-        type: integer
       - example: 2000
         in: query
         minimum: 0
@@ -5392,27 +6629,6 @@ paths:
         minimum: 0
         name: min_rate
         type: integer
-      - example: 1
-        in: query
-        maximum: 1000
-        minimum: 1
-        name: page
-        type: integer
-      - example: rahim
-        in: query
-        maxLength: 100
-        name: q
-        type: string
-      - enum:
-        - rating
-        - experience
-        - price_low
-        - price_high
-        - newest
-        example: rating
-        in: query
-        name: sort
-        type: string
       - example: tea_garden
         in: query
         maxLength: 40
@@ -5952,30 +7168,13 @@ paths:
         in: query
         name: featured
         type: boolean
-      - example: 20
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - example: beach
-        in: query
-        maxLength: 100
-        name: q
-        type: string
       - enum:
-        - popular
-        - rating
-        - newest
-        - title
-        example: popular
+        - images
+        - coordinates
+        - videos
+        example: images
         in: query
-        name: sort
+        name: missing
         type: string
       - enum:
         - draft
@@ -6267,6 +7466,83 @@ paths:
         / AI)
       tags:
       - 12. Manage · Tourist spots
+  /manage/tourist-spots/bulk:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Apply one action to 1-100 spots: publish, unpublish (back to draft), archive, feature, unfeature
+        or delete. Spots that cannot take the action are listed in data.skipped (SPOT_NOT_FOUND,
+        SPOT_HAS_ACTIVE_GIGS for delete) — the rest are still changed.
+      parameters:
+      - description: IDs + action
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/dto.BulkSpotRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.BulkSpotResponse'
+              type: object
+        "422":
+          description: VALIDATION_ERROR
+          schema:
+            $ref: '#/definitions/response.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Bulk action on tourist spots
+      tags:
+      - 12. Manage · Tourist spots
+  /manage/tourist-spots/stats:
+    get:
+      description: |-
+        Spot counts by status, featured, "needs work" (no photos / no videos / no map coordinates),
+        spots with guide gigs, districts covered by published spots and spots per category.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.SpotStats'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Content studio counters
+      tags:
+      - 12. Manage · Tourist spots
+  /messages/unread:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UnreadMessages'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Unread chat messages (total + per booking)
+      tags:
+      - 20. Trip plan & chat
   /meta/countries:
     get:
       description: |-
@@ -6289,10 +7565,93 @@ paths:
       summary: Countries with flags (for the country dropdown)
       tags:
       - 0. Meta
+  /notifications:
+    get:
+      parameters:
+      - example: booking.accepted
+        in: query
+        maxLength: 40
+        name: type
+        type: string
+      - example: false
+        in: query
+        name: unread
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.ItemPage'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: My notifications
+      tags:
+      - 19. Realtime & notifications
+  /notifications/{id}/read:
+    post:
+      parameters:
+      - description: Notification ID
+        format: uuid
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: Mark one notification read
+      tags:
+      - 19. Realtime & notifications
+  /notifications/read-all:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Body'
+      security:
+      - BearerAuth: []
+      summary: Mark all my notifications read
+      tags:
+      - 19. Realtime & notifications
+  /notifications/unread-count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.UnreadCount'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Unread notification count (badge)
+      tags:
+      - 19. Realtime & notifications
   /payment-methods:
     get:
       description: |-
-        Default payment option: send the booking total to one of these numbers ("Send Money"/"Payment"),
+        The main option is online payment (POST /bookings/{id}/pay, aamarPay). Fallback: send the booking total to one of these numbers ("Send Money"/"Payment"),
         then submit the transaction ID with POST /bookings/{id}/payments.
       produces:
       - application/json
@@ -6308,9 +7667,82 @@ paths:
                     $ref: '#/definitions/dto.PaymentMethodResponse'
                   type: array
               type: object
-      summary: Where to send money (bKash / Nagad / Rocket numbers)
+      summary: 'Manual fallback: where to send money (bKash / Nagad / Rocket numbers)'
       tags:
       - 16. Payments
+  /payments/aamarpay/{tran_id}/verify:
+    post:
+      description: Asks aamarPay again (e.g. the browser was closed before returning).
+        Safe to call repeatedly.
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: tran_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.GatewayPaymentResponse'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Re-check an online payment (payer or admin)
+      tags:
+      - 16. Payments
+  /payments/aamarpay/return:
+    post:
+      description: |-
+        aamarPay posts the result here. Nothing in the request is trusted: the API re-checks the
+        transaction with aamarPay (amount, currency, store) and then 303-redirects to the website.
+      parameters:
+      - description: Our transaction ID
+        in: query
+        name: tran_id
+        required: true
+        type: string
+      - description: success | fail | cancel
+        in: query
+        name: result
+        required: true
+        type: string
+      responses:
+        "303":
+          description: See Other
+      summary: aamarPay return URL (browser redirect, not for API clients)
+      tags:
+      - 16. Payments
+  /realtime/ticket:
+    post:
+      description: |-
+        Returns a single-use ticket (valid 60 s). Connect with socket.io-client v4:
+        `io(API_ORIGIN, { path: "/socket.io/", auth: { ticket } })`. The socket joins the rooms
+        `user:<id>` and `role:<role>` and receives: `notification`, `booking:updated`, `payment:updated`,
+        `message:new`, `message:read`, `plan:updated`, `admin:activity` (admins). Get a new ticket for every (re)connect.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/response.Body'
+            - properties:
+                data:
+                  $ref: '#/definitions/dto.Ticket'
+              type: object
+      security:
+      - BearerAuth: []
+      summary: Socket.IO connection ticket
+      tags:
+      - 19. Realtime & notifications
   /reviews:
     get:
       description: Pass one of `gig_id`, `guide_id`, `spot_id`. Includes a star breakdown
@@ -6324,25 +7756,12 @@ paths:
         in: query
         name: guide_id
         type: string
-      - example: 10
+      - example: 5
         in: query
-        maximum: 50
+        maximum: 5
         minimum: 1
-        name: limit
+        name: rating
         type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - enum:
-        - newest
-        - highest
-        - lowest
-        example: newest
-        in: query
-        name: sort
-        type: string
       - example: ""
         in: query
         name: spot_id
@@ -6442,31 +7861,6 @@ paths:
         in: query
         name: featured
         type: boolean
-      - example: 20
-        in: query
-        maximum: 100
-        minimum: 1
-        name: limit
-        type: integer
-      - example: 1
-        in: query
-        minimum: 1
-        name: page
-        type: integer
-      - example: beach
-        in: query
-        maxLength: 100
-        name: q
-        type: string
-      - enum:
-        - popular
-        - rating
-        - newest
-        - title
-        example: popular
-        in: query
-        name: sort
-        type: string
       - example: 75
         in: query
         minimum: 1

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"cholobangladesh-server/pkg/apperror"
+	"cholobangladesh-server/pkg/listing"
 
 	"github.com/google/uuid"
 	"github.com/lib/pq"
@@ -55,6 +56,10 @@ type Spot struct {
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	DeletedAt       gorm.DeletedAt
+
+	// Read-only counters, filled by the staff listing (manage) only.
+	ImageCount int `gorm:"->;-:migration"`
+	VideoCount int `gorm:"->;-:migration"`
 
 	Division *GeoRef       `gorm:"foreignKey:DivisionID"`
 	District *DistrictRef  `gorm:"foreignKey:DistrictID"`
@@ -137,16 +142,15 @@ func (Video) TableName() string { return "tourist_spot_videos" }
 
 // Filter for listings. Public callers always get Status = published.
 type Filter struct {
-	Status     string
-	DivisionID int
-	DistrictID int
-	UpazilaID  int
-	Category   string
-	Featured   *bool
-	Query      string
-	Sort       string // popular | rating | newest | title
-	Page       int
-	Limit      int
+	Status         string
+	DivisionID     int
+	DistrictID     int
+	UpazilaID      int
+	Category       string
+	Featured       *bool
+	Missing        string // staff only: images | coordinates | videos — spots that still need work
+	WithCounts     bool   // staff only: fill ImageCount / VideoCount
+	listing.Params        // page, limit, sort, q
 }
 
 // Marker is the lightweight row used by the Bangladesh map.
@@ -168,6 +172,35 @@ type Marker struct {
 	DivisionID    int
 }
 
+// Stats is the content studio dashboard (soft-deleted spots excluded).
+type Stats struct {
+	Total              int64
+	Published          int64
+	Draft              int64
+	Archived           int64
+	Featured           int64
+	MissingImages      int64
+	MissingCoordinates int64
+	MissingVideos      int64
+	WithGigs           int64
+	DistrictsCovered   int64 // districts with at least one published spot
+	TotalDistricts     int64
+	ByCategory         []CategoryCount
+}
+
+type CategoryCount struct {
+	Category string
+	Count    int64
+}
+
+// Brief is the minimum needed to validate a bulk action.
+type Brief struct {
+	ID       uuid.UUID
+	Title    string
+	Status   string
+	GigCount int
+}
+
 // Children replaces the child rows of a spot when the pointer is non-nil.
 type Children struct {
 	UpazilaIDs *[]int
@@ -176,7 +209,7 @@ type Children struct {
 }
 
 type Repository interface {
-	List(ctx context.Context, f Filter) ([]Spot, int64, error)
+	List(ctx context.Context, f Filter) (listing.Result[Spot], error)
 	Markers(ctx context.Context, divisionID, districtID int) ([]Marker, error)
 	Get(ctx context.Context, id uuid.UUID, publishedOnly bool) (*Spot, error)
 	GetBySlug(ctx context.Context, slug string, publishedOnly bool) (*Spot, error)
@@ -184,6 +217,12 @@ type Repository interface {
 	Create(ctx context.Context, s *Spot, c Children) error
 	Update(ctx context.Context, id uuid.UUID, fields map[string]any, c Children) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
+
+	// Staff dashboard + bulk actions.
+	Stats(ctx context.Context) (*Stats, error)
+	Briefs(ctx context.Context, ids []uuid.UUID) ([]Brief, error)
+	BulkUpdate(ctx context.Context, ids []uuid.UUID, fields map[string]any) (int64, error)
+	BulkSoftDelete(ctx context.Context, ids []uuid.UUID) (int64, error)
 
 	Images(ctx context.Context, spotID uuid.UUID) ([]Image, error)
 	AddImages(ctx context.Context, spotID uuid.UUID, imgs []Image) error

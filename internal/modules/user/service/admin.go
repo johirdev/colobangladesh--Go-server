@@ -1,6 +1,8 @@
 package service
 
 import (
+	"cholobangladesh-server/internal/shared"
+	"cholobangladesh-server/pkg/listing"
 	"context"
 	"errors"
 	"log/slog"
@@ -18,18 +20,13 @@ import (
 const documentURLTTL = 10 * time.Minute
 
 func (s *Service) AdminListUsers(ctx context.Context, q dto.AdminUserQuery) (response.Page[dto.AdminUserResponse], error) {
-	page, limit := pageDefaults(q.Page, q.Limit, 20)
-	users, total, err := s.Repo.ListUsers(ctx, domain.UserFilter{
-		Role: domain.Role(q.Role), Status: domain.Status(q.Status), Query: q.Q, Page: page, Limit: limit,
+	res, err := s.Repo.ListUsers(ctx, domain.UserFilter{
+		Role: domain.Role(q.Role), Status: domain.Status(q.Status), Params: q.Params,
 	})
 	if err != nil {
 		return response.Page[dto.AdminUserResponse]{}, err
 	}
-	items := make([]dto.AdminUserResponse, 0, len(users))
-	for i := range users {
-		items = append(items, toAdminUser(&users[i]))
-	}
-	return response.NewPage(items, page, limit, total), nil
+	return listing.Map(res, toAdminUser), nil
 }
 
 func (s *Service) AdminGetUser(ctx context.Context, id uuid.UUID) (*dto.MeResponse, error) {
@@ -61,18 +58,13 @@ func (s *Service) AdminSetUserStatus(ctx context.Context, adminID, targetID uuid
 }
 
 func (s *Service) AdminListVerifications(ctx context.Context, q dto.VerificationQuery) (response.Page[dto.AdminVerificationResponse], error) {
-	page, limit := pageDefaults(q.Page, q.Limit, 20)
-	list, total, err := s.Repo.ListVerifications(ctx, domain.VerificationFilter{
-		Status: domain.VerificationStatus(q.Status), Page: page, Limit: limit,
+	res, err := s.Repo.ListVerifications(ctx, domain.VerificationFilter{
+		Status: domain.VerificationStatus(q.Status), Params: q.Params,
 	})
 	if err != nil {
 		return response.Page[dto.AdminVerificationResponse]{}, err
 	}
-	items := make([]dto.AdminVerificationResponse, 0, len(list))
-	for i := range list {
-		items = append(items, toAdminVerification(&list[i]))
-	}
-	return response.NewPage(items, page, limit, total), nil
+	return listing.Map(res, toAdminVerification), nil
 }
 
 // AdminGetVerification decrypts the NID and creates 10-minute signed URLs for the documents.
@@ -154,6 +146,12 @@ func (s *Service) review(ctx context.Context, adminID, id uuid.UUID, status doma
 		msg = "Your guide verification was not approved: " + *reason + ". Please fix it and resubmit in the app."
 	}
 	s.audit(ctx, &v.UserID, &adminID, event, meta, map[string]any{"verification_id": id, "reason": reason})
+	title := "You're verified!"
+	if status == domain.VerificationRejected {
+		title = "Verification not approved"
+	}
+	s.Notify.Notify(ctx, []uuid.UUID{v.UserID}, shared.Notification{Type: "kyc." + string(status), Title: title, Body: msg,
+		Link: "/guide/verification", Data: map[string]any{"status": status}})
 	if v.User != nil && v.User.PhoneVerified() {
 		to := *v.User.Phone
 		s.async("kyc_result_sms", func(ctx context.Context) error {

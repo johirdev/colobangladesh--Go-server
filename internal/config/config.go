@@ -30,6 +30,7 @@ type Config struct {
 	Admin      AdminConfig
 	Autofill   AutofillConfig
 	Market     MarketConfig
+	Payment    PaymentConfig
 }
 
 type AppConfig struct {
@@ -40,6 +41,10 @@ type AppConfig struct {
 	CORSOrigins    []string
 	SwaggerEnabled bool
 	MigrateOnStart bool
+	// PublicAPIURL is how browsers / payment gateways reach this API (callbacks), e.g. https://api.example.com
+	PublicAPIURL string
+	// FrontendURL is where users are sent back after an online payment, e.g. https://example.com
+	FrontendURL string
 }
 
 func (a AppConfig) IsProduction() bool { return a.Env == "production" }
@@ -147,6 +152,24 @@ type MarketConfig struct {
 	FreeGigLimit int // gigs a guide may publish without buying extra slots
 }
 
+// PaymentConfig: aamarPay online payments.
+//
+//	development: AAMARPAY_URL=https://sandbox.aamarpay.com/jsonpost.php
+//	production : AAMARPAY_URL=https://secure.aamarpay.com/jsonpost.php
+type PaymentConfig struct {
+	AamarpayURL  string
+	StoreID      string
+	SignatureKey string
+}
+
+// Enabled reports whether online payments are configured.
+func (p PaymentConfig) Enabled() bool {
+	return p.AamarpayURL != "" && p.StoreID != "" && p.SignatureKey != ""
+}
+
+// Sandbox reports whether the sandbox gateway is configured.
+func (p PaymentConfig) Sandbox() bool { return strings.Contains(p.AamarpayURL, "sandbox") }
+
 // Load reads configuration. It returns an error describing every invalid value.
 func Load() (*Config, error) {
 	_ = godotenv.Load()
@@ -163,6 +186,8 @@ func Load() (*Config, error) {
 			CORSOrigins:    p.list("CORS_ORIGINS"),
 			SwaggerEnabled: p.boolean("SWAGGER_ENABLED", true),
 			MigrateOnStart: p.boolean("MIGRATE_ON_START", true),
+			PublicAPIURL:   strings.TrimRight(p.str("PUBLIC_API_URL", "http://localhost:8080"), "/"),
+			FrontendURL:    strings.TrimRight(p.str("FRONTEND_URL", "http://localhost:3000"), "/"),
 		},
 		DB: DBConfig{
 			URL:             p.str("DATABASE_URL", ""),
@@ -251,6 +276,11 @@ func Load() (*Config, error) {
 		Market: MarketConfig{
 			FreeGigLimit: p.integer("FREE_GIG_LIMIT", 5),
 		},
+		Payment: PaymentConfig{
+			AamarpayURL:  p.str("AAMARPAY_URL", ""),
+			StoreID:      p.str("STORE_ID", p.str("AAMARPAY_STORE_ID", "")),
+			SignatureKey: p.str("SIGNATURE_KEY", p.str("AAMARPAY_SIGNATURE_KEY", "")),
+		},
 	}
 
 	cfg.validate(&errs)
@@ -308,7 +338,16 @@ func (c *Config) validate(errs *[]error) {
 	if c.Mail.Enabled && (c.Mail.Username == "" || c.Mail.Password == "" || c.Mail.FromEmail == "") {
 		add("SMTP_USERNAME, SMTP_PASSWORD and SMTP_FROM_EMAIL are required when EMAIL_ENABLED=true")
 	}
+	if u := c.Payment.AamarpayURL; u != "" && !strings.HasPrefix(u, "https://") {
+		add("AAMARPAY_URL must be an https:// URL")
+	}
 	if c.App.IsProduction() {
+		if c.Payment.Enabled() && c.Payment.Sandbox() {
+			add("AAMARPAY_URL points to the sandbox in production (use https://secure.aamarpay.com/jsonpost.php)")
+		}
+		if !strings.HasPrefix(c.App.PublicAPIURL, "https://") || !strings.HasPrefix(c.App.FrontendURL, "https://") {
+			add("PUBLIC_API_URL and FRONTEND_URL must be https:// in production")
+		}
 		if !c.SMS.Enabled || !c.Mail.Enabled {
 			add("SMS_ENABLED and EMAIL_ENABLED must be true in production (OTPs are never logged there)")
 		}

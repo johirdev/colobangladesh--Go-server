@@ -4,10 +4,15 @@
 package gig
 
 import (
+	"context"
+	"time"
+
 	"cholobangladesh-server/internal/http/middleware"
+	"cholobangladesh-server/internal/modules/gig/domain"
 	"cholobangladesh-server/internal/modules/gig/handler"
 	"cholobangladesh-server/internal/modules/gig/repository"
 	"cholobangladesh-server/internal/modules/gig/service"
+	"cholobangladesh-server/internal/platform/storage"
 	"cholobangladesh-server/internal/shared"
 
 	"github.com/gin-gonic/gin"
@@ -19,12 +24,32 @@ type Module struct {
 }
 
 func New(d *shared.Deps) *Module {
-	svc := service.New(repository.NewPostgres(d.DB), d.Config.Market.FreeGigLimit)
+	var files domain.FileStorage
+	if d.Storage != nil {
+		files = storageAdapter{d.Storage}
+	}
+	svc := service.New(repository.NewPostgres(d.DB), files, d.Config.Security.MaxUploadBytes, d.Config.Market.FreeGigLimit)
 	return &Module{h: handler.New(svc), d: d}
+}
+
+// storageAdapter fits Cloudinary to the gig FileStorage port.
+type storageAdapter struct{ c *storage.Cloudinary }
+
+func (s storageAdapter) UploadPublic(ctx context.Context, data []byte, path, id string) (string, string, error) {
+	u, err := s.c.UploadPublic(ctx, data, path, id)
+	if err != nil {
+		return "", "", err
+	}
+	return u.URL, u.PublicID, nil
+}
+
+func (s storageAdapter) Delete(ctx context.Context, id string) error {
+	return s.c.Delete(ctx, id, false)
 }
 
 func (m *Module) Routes(rg *gin.RouterGroup) {
 	h, auth := m.h, m.d.Auth()
+	uploadLimit := middleware.RateLimit(m.d.Limiter, "upload", m.d.Config.RateLimit.UploadsPerHour*5, time.Hour, middleware.ByUserOrIP)
 
 	mine := rg.Group("/gigs/me", middleware.NoStore(), auth, middleware.RequireRole(shared.RoleGuide))
 	{
@@ -34,6 +59,11 @@ func (m *Module) Routes(rg *gin.RouterGroup) {
 		mine.GET("/:id", h.MyGig)
 		mine.PATCH("/:id", h.Update)
 		mine.DELETE("/:id", h.Delete)
+		// gallery (photos are cropped in the browser; the first one is the cover)
+		mine.POST("/:id/images", uploadLimit, h.UploadImages)
+		mine.PUT("/:id/images/:imageId", uploadLimit, h.ReplaceImage)
+		mine.PATCH("/:id/images/:imageId", h.UpdateImage)
+		mine.DELETE("/:id/images/:imageId", h.DeleteImage)
 	}
 
 	rg.GET("/gigs", h.List)

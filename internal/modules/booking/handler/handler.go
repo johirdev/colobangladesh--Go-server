@@ -151,25 +151,32 @@ func (h *Handler) Reject(c *gin.Context) {
 
 // Complete godoc
 //
-//	@Summary		Mark the tour as completed (guide)
-//	@Description	Allowed on/after the tour date. Opens payment and review for the tourist.
+//	@Summary		Confirm the tour is completed (tourist only)
+//	@Description	Only the tourist can confirm, once the booking is **paid** and on/after the tour start date.
+//	@Description	If the tourist never confirms, an admin completes it after the end date
+//	@Description	(POST /admin/bookings/{id}/complete) after talking to the guide. Opens the review.
 //	@Tags			15. Bookings
+//	@Accept			json
 //	@Produce		json
 //	@Security		BearerAuth
-//	@Param			id	path		string	true	"Booking ID"	format(uuid)
-//	@Success		200	{object}	response.Body{data=dto.BookingResponse}
-//	@Failure		409	{object}	response.ErrorResponse	"BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED"
+//	@Param			id		path		string				true	"Booking ID"	format(uuid)
+//	@Param			body	body		dto.CompleteRequest	false	"Optional note"
+//	@Success		200		{object}	response.Body{data=dto.BookingResponse}
+//	@Failure		409		{object}	response.ErrorResponse	"BOOKING_STATUS_CONFLICT | TOUR_NOT_STARTED | BOOKING_NOT_PAID"
 //	@Router			/bookings/{id}/complete [post]
 func (h *Handler) Complete(c *gin.Context) {
 	withID(c, func(id uuid.UUID) {
-		res, err := h.svc.Complete(c.Request.Context(), web.UserID(c), id)
+		var req dto.CompleteRequest
+		_ = c.ShouldBindJSON(&req)
+		res, err := h.svc.Complete(c.Request.Context(), web.UserID(c), id, req.Note)
 		reply(c, http.StatusOK, "tour completed", res, err)
 	})
 }
 
 // Cancel godoc
 //
-//	@Summary	Cancel a booking (tourist or guide, while pending/accepted)
+//	@Summary		Cancel a booking (tourist or guide, while pending or accepted-but-unpaid)
+//	@Description	Paid bookings can only be cancelled by an admin (POST /admin/bookings/{id}/cancel, with refund).
 //	@Tags		15. Bookings
 //	@Accept		json
 //	@Produce	json
@@ -177,7 +184,7 @@ func (h *Handler) Complete(c *gin.Context) {
 //	@Param		id		path		string				true	"Booking ID"	format(uuid)
 //	@Param		body	body		dto.ReasonRequest	false	"Reason"
 //	@Success	200		{object}	response.Body{data=dto.BookingResponse}
-//	@Failure	409		{object}	response.ErrorResponse	"BOOKING_STATUS_CONFLICT"
+//	@Failure	409		{object}	response.ErrorResponse	"BOOKING_STATUS_CONFLICT | PAID_BOOKING_CANCEL"
 //	@Router		/bookings/{id}/cancel [post]
 func (h *Handler) Cancel(c *gin.Context) {
 	withID(c, func(id uuid.UUID) {
@@ -192,8 +199,8 @@ func (h *Handler) Cancel(c *gin.Context) {
 
 // Methods godoc
 //
-//	@Summary		Where to send money (bKash / Nagad / Rocket numbers)
-//	@Description	Default payment option: send the booking total to one of these numbers ("Send Money"/"Payment"),
+//	@Summary		Manual fallback: where to send money (bKash / Nagad / Rocket numbers)
+//	@Description	The main option is online payment (POST /bookings/{id}/pay, aamarPay). Fallback: send the booking total to one of these numbers ("Send Money"/"Payment"),
 //	@Description	then submit the transaction ID with POST /bookings/{id}/payments.
 //	@Tags			16. Payments
 //	@Produce		json
@@ -206,8 +213,8 @@ func (h *Handler) Methods(c *gin.Context) {
 
 // SubmitPayment godoc
 //
-//	@Summary		Submit a mobile-banking payment for a completed tour
-//	@Description	Only after the tour is completed (`can_pay`). `amount` must equal `total_amount`. The payment stays
+//	@Summary		Manual fallback: submit a mobile-banking payment for an accepted booking
+//	@Description	Only after the guide accepts (`can_pay`). `amount` must equal `total_amount`. The payment stays
 //	@Description	`pending` until an admin verifies it; then the booking's `payment_status` becomes `paid`.
 //	@Tags			16. Payments
 //	@Accept			json

@@ -17,6 +17,7 @@ import (
 const (
 	ticketRegisterUser  = "register_user"
 	ticketRegisterGuide = "register_guide"
+	ticketRegisterLocal = "register_user_phone" // Bangladeshi tourist (BD mobile)
 	ticketReset         = "reset_password"
 )
 
@@ -92,6 +93,73 @@ func (s *Service) CompleteUserRegistration(ctx context.Context, req dto.Complete
 	s.audit(ctx, &u.ID, &u.ID, domain.EventRegistered, meta, map[string]any{"role": u.Role, "method": "email_otp"})
 	s.welcome(u)
 	return s.issueAuth(ctx, u, meta, true)
+}
+
+// =====================================================================
+// Bangladeshi tourist registration: BD phone OTP -> verify -> complete
+// (foreign tourists use the email flow above)
+// =====================================================================
+
+func (s *Service) SendLocalUserRegistrationOTP(ctx context.Context, rawPhone string, meta domain.RequestMeta) (*dto.OTPSentResponse, error) {
+	// Same checks and SMS limits as guide sign-up.
+	return s.SendGuideRegistrationOTP(ctx, rawPhone, meta)
+}
+
+func (s *Service) VerifyLocalUserRegistrationOTP(ctx context.Context, rawPhone, code string) (*dto.VerificationTicketResponse, error) {
+	p, ok := phone.NormalizeBD(rawPhone)
+	if !ok {
+		return nil, validation.Field("phone", "bd_phone", "must be a valid Bangladeshi mobile number")
+	}
+	if err := s.verifyOTP(ctx, purposeRegister, p, p, code); err != nil {
+		return nil, err
+	}
+	return s.issueTicket(ctx, ticketRegisterLocal, p, s.cfg.RegistrationTTL)
+}
+
+func (s *Service) CompleteLocalUserRegistration(ctx context.Context, req dto.CompleteLocalUserRegistrationRequest, meta domain.RequestMeta) (*dto.AuthResponse, error) {
+	p, err := s.peekTicket(ctx, ticketRegisterLocal, req.RegistrationToken)
+	if err != nil {
+		return nil, err
+	}
+	var pwHash *string
+	if req.Password != nil && *req.Password != "" {
+		h, err := s.Hasher.Hash(*req.Password)
+		if err != nil {
+			return nil, err
+		}
+		pwHash = &h
+	}
+	lang := "bn"
+	if req.PreferredLanguage != nil {
+		lang = *req.PreferredLanguage
+	}
+	t := now()
+	u := &domain.User{
+		ID: newID(), Role: domain.RoleUser, Status: domain.StatusActive,
+		Phone: &p, PhoneVerifiedAt: &t, PasswordHash: pwHash, TokenVersion: 1,
+	}
+	u.Profile = &domain.UserProfile{UserID: u.ID, FullName: strings.TrimSpace(req.FullName),
+		CountryCode: ptr("BD"), City: trimPtr(req.City), PreferredLanguage: lang}
+
+	if err := s.Repo.CreateUser(ctx, u); err != nil {
+		if errors.Is(err, domain.ErrDuplicate) {
+			return nil, domain.ErrPhoneTaken
+		}
+		return nil, err
+	}
+	s.burnTicket(ctx, ticketRegisterLocal, req.RegistrationToken)
+	s.audit(ctx, &u.ID, &u.ID, domain.EventRegistered, meta, map[string]any{"role": u.Role, "method": "phone_otp", "nationality": "BD"})
+	return s.issueAuth(ctx, u, meta, true)
+}
+
+func trimPtr(p *string) *string {
+	if p == nil {
+		return nil
+	}
+	if v := strings.TrimSpace(*p); v != "" {
+		return &v
+	}
+	return nil
 }
 
 // =====================================================================
